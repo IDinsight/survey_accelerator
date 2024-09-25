@@ -17,9 +17,7 @@ import * as React from "react";
 import { useEffect } from "react";
 
 const pageDict = [
-  { title: "Question Answering", path: "/content" },
-  { title: "Urgency Detection", path: "/urgency-rules" },
-  { title: "Integrations", path: "/integrations" },
+  { title: "Survey Accelerator Search", path: "/content" },
 ];
 
 const settings = ["Logout"];
