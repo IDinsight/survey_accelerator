@@ -77,11 +77,11 @@ If not done already, configure the environment variables in [Step 2](#step-2-con
             ✔ Container aaq-stack-litellm_proxy-1  Started
             ✔ Container aaq-stack-relational_db-1  Started
             ✔ Container aaq-stack-core_backend-1   Started
-            ✔ Container aaq-stack-admin_app-1      Started
+            ✔ Container aaq-stack-frontend-1      Started
             Watch enabled
 
     The app will now run and update with any changes made to the `core_backend` or
-    `admin_app` folders.
+    `frontend` folders.
 
     The admin app will be available on [https://localhost](https://localhost) and the
     backend API testing UI on [https://localhost/api/docs](https://localhost/api/docs).
@@ -252,7 +252,7 @@ procedures.
 1. In a *new* terminal:
 
     ```shell
-    cd admin_app
+    cd frontend
     nvm use 19
     npm install
     npm run dev

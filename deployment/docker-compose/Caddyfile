@@ -4,6 +4,6 @@
     }
 
     handle {
-        reverse_proxy admin_app:3000
+        reverse_proxy frontend:3000
     }
 }

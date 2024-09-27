@@ -25,10 +25,10 @@ services:
         - action: rebuild
           path: ../../core_backend
 
-  admin_app:
+  frontend:
     image: idinsight/aaq-admin-app:latest
     build:
-      context: ../../admin_app
+      context: ../../frontend
       dockerfile: Dockerfile
     command: >
       node server.js
@@ -40,7 +40,7 @@ services:
     develop:
       watch:
         - action: rebuild
-          path: ../../admin_app
+          path: ../../frontend
 
   caddy:
     image: caddy:2.7.6

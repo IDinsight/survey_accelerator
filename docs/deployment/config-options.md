@@ -48,7 +48,7 @@ There are several aspects of AAQ you can configure:
 ## AAQ-wide configurations
 
 The base environment variables are shared by `caddy` (reverse proxy), `core_backend`,
-and `admin_app` during run time.
+and `frontend` during run time.
 
 If not done already, copy the template environment file to `.base.env`
 
