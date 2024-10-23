@@ -1,137 +1,133 @@
-"""This module contains the FastAPI router for the document handling endpoints."""
+# routers.py
 
-from io import BytesIO
-
-import PyPDF2
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from numpy import ndarray
-from sentence_transformers import SentenceTransformer
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+import os
 
-from ..auth.dependencies import authenticate_key
-from ..config import EMBEDDING_MODEL_NAME
-from ..database import get_async_session
-from ..utils import setup_logger
-from .models import save_document_to_db
-from .schemas import IngestionResponse
+from app.auth.dependencies import authenticate_key
+from app.database import get_async_session
+from app.ingestion.schemas import AirtableIngestionResponse
+from app.ingestion.models import save_document_to_db
+from app.ingestion.utils.airtable_utils import get_airtable_records
+from app.ingestion.utils.google_drive_utils import (
+    get_drive_service,
+    extract_file_id,
+    determine_file_type,
+    download_file,
+)
+from app.ingestion.utils.file_processing_utils import (
+    process_file,
+    create_directories,
+    open_sheet_in_pandas,
+)
+from app.utils import setup_logger
 
 logger = setup_logger()
+
+
+router = APIRouter(
+    dependencies=[Depends(authenticate_key)],
+    prefix="/ingestion",
+    tags=["Document Ingestion"],
+)
 
 TAG_METADATA = {
     "name": "Document Ingestion",
     "description": "Endpoints for ingesting documents.",
 }
 
-router = APIRouter(
-    dependencies=[Depends(authenticate_key)],
-    prefix="/ingestion",
-    tags=[TAG_METADATA["name"]],
-)
+XLSX_SUBDIR = "xlsx_files"
 
 
-@router.post("/", response_model=IngestionResponse)
-async def upload_document(
-    file: UploadFile = File(...),
-    asession: AsyncSession = Depends(get_async_session),
-) -> IngestionResponse:
+@router.post("/airtable", response_model=AirtableIngestionResponse)
+async def ingest_airtable(asession: AsyncSession = Depends(get_async_session)):
     """
-    Upload a document, chunk it, embed each chunk,
-    and store embeddings in PostgreSQL using pgvector.
+    Ingest documents from Airtable records.
     """
-    file_name = file.filename or "unknown filename"
-
-    try:
-        content = await file.read()
-        chunks = await parse_file(content)
-        logger.info("Document parsed successfully.")
-
-        embeddings = await create_embeddings(chunks)
-        logger.info(
-            (
-                f"All chunks embedded successfully for file {file_name}."
-                f"Total chunks: {len(embeddings)}"
-            )
+    contents = get_airtable_records()
+    if not contents:
+        return AirtableIngestionResponse(
+            total_records_processed=0,
+            total_chunks_created=0,
+            message="No records found in Airtable.",
         )
 
-        file_id = await save_document_to_db(
-            text_embeddings=list(zip(chunks, embeddings)),
+    drive_service = get_drive_service()
+    total_records_processed = 0
+    total_chunks_created = 0
+
+    create_directories()
+
+    for record in contents:
+        fields = record.get("fields", {})
+        file_name = fields.get("File name")
+        gdrive_link = fields.get("Drive link")
+
+        if not file_name or not gdrive_link:
+            logger.warning(
+                f"Record {record.get('id')} is missing 'File name' or 'Drive link'. Skipping."
+            )
+            continue
+
+        # Determine file type
+        file_type = determine_file_type(file_name)
+        if file_type == "other":
+            logger.warning(
+                f"File '{file_name}' has an unsupported extension. Skipping."
+            )
+            continue
+
+        # Extract file ID from Drive link
+        try:
+            file_id = extract_file_id(gdrive_link)
+        except ValueError as ve:
+            logger.error(f"Error processing file '{file_name}': {ve}. Skipping.")
+            continue
+
+        # Download the file
+        file_buffer = download_file(file_id, file_name, file_type, drive_service)
+
+        if not file_buffer and file_type != "xlsx":
+            logger.error(f"Failed to download file '{file_name}'. Skipping.")
+            continue
+
+        # If the file is an Excel file, optionally load it into pandas
+        if file_type == "xlsx":
+            excel_path = os.path.join(
+                XLSX_SUBDIR,
+                (
+                    file_name
+                    if file_name.lower().endswith(".xlsx")
+                    else f"{file_name}.xlsx"
+                ),
+            )
+            df = open_sheet_in_pandas(excel_path)
+            if df is not None:
+                logger.info(f"Excel file '{file_name}' loaded successfully.")
+            else:
+                logger.warning(f"Failed to load Excel file '{file_name}'.")
+            continue  # Assuming we don't process Excel files further
+
+        # Process the file
+        processed_pages = process_file(file_buffer, file_name, file_type)
+
+        if not processed_pages:
+            logger.warning(f"No processed pages for file '{file_name}'. Skipping.")
+            continue
+
+        # Save to database
+        await save_document_to_db(
+            processed_pages=processed_pages,
+            file_id=file_id,
             file_name=file_name,
             asession=asession,
         )
 
-    except Exception as e:
-        logger.error(f"Failed to index uploaded file: {e}")
-        raise HTTPException(
-            status_code=400, detail=f"Failed to index uploaded file: {e}."
-        ) from e
-
-    return IngestionResponse(
-        file_name=file_name, file_id=file_id, total_chunks=len(embeddings)
+        total_records_processed += 1
+        total_chunks_created += len(processed_pages)
+        print(f"File '{file_name}' processed successfully.")
+    return AirtableIngestionResponse(
+        total_records_processed=total_records_processed,
+        total_chunks_created=total_chunks_created,
+        message="Ingestion completed.",
     )
-
-
-async def parse_file(file: bytes) -> list[str]:
-    """Parse the content of an uploaded file into chunks.
-
-    For PDFs, each page is treated as its own chunk.
-    For text files, the content is split into chunks of fixed size.
-
-    Parameters
-    ----------
-    file : bytes
-        The content of the uploaded file.
-
-    Returns
-    -------
-    List[str]
-        A list of text chunks extracted from the file.
-    """
-    if file[:5] == b"%PDF-":
-        pdf_reader = PyPDF2.PdfReader(BytesIO(file))
-        chunks = []
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            page_text = page.extract_text()
-            if page_text and page_text.strip():
-                chunks.append(page_text.strip())
-        if not chunks:
-            raise RuntimeError("No text could be extracted from the uploaded PDF file.")
-
-    else:
-        # Assume it's text
-        text = file.decode("utf-8")
-        if not text.strip():
-            raise RuntimeError(
-                "No text could be extracted from the uploaded text file."
-            )
-        chunk_size = 1000
-        chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
-
-    return chunks
-
-
-async def create_embeddings(chunks: list[str]) -> ndarray:
-    """
-    Create embeddings for a list of text chunks using `sentence_transformers`
-
-    Parameters
-    ----------
-    chunks
-        A list of text chunks.
-
-    Returns
-    -------
-    ndarray
-        A list of embedding vectors corresponding to each text chunk.
-    """
-
-    embed_model = SentenceTransformer(EMBEDDING_MODEL_NAME, trust_remote_code=True)
-
-    logger.info(
-        f"""Generating embeddings for {len(chunks)} chunks using
-                async batch processing"""
-    )
-    embeddings = embed_model.encode(chunks)
-    logger.info("Embeddings generated successfully")
-
-    return embeddings

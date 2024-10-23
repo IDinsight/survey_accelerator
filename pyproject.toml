@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "hcd-ai"
+name = "survey-accelerator"
 version = "0.1.0"
-description = "HEW assistant"
-authors = ["Your Name <you@example.com>"]
+description = "Survey Accelerator"
+authors = ["Mark Botterill <mark.botterill@idinsight.org>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]

@@ -5,12 +5,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis import asyncio as aioredis
 
+from . import ingestion
 from .config import REDIS_HOST
-from .ingestion import router as ingestion_router
-from .search import router as search_router
 from .utils import setup_logger
 
 logger = setup_logger()
+
+tags_metadata = [ingestion.TAG_METADATA]
 
 
 @asynccontextmanager
@@ -30,12 +31,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     """
-    Create a FastAPI application with the experiments router.
+    Create a FastAPI application with the appropriate routers.
     """
-    app = FastAPI(title="HEW-AI Backend API", lifespan=lifespan, debug=True)
+    app = FastAPI(
+        title="Survey Accelerator",
+        openapi_tags=tags_metadata,
+        lifespan=lifespan,
+        debug=True,
+    )
 
-    app.include_router(ingestion_router)
-    app.include_router(search_router)
+    app.include_router(ingestion.router)
 
     origins = [
         "http://localhost",

@@ -4,9 +4,7 @@ serialization."""
 from pydantic import BaseModel
 
 
-class IngestionResponse(BaseModel):
-    """Pydantic model for the response of the ingestion endpoint."""
-
-    file_name: str
-    file_id: str
-    total_chunks: int
+class AirtableIngestionResponse(BaseModel):
+    total_records_processed: int
+    total_chunks_created: int
+    message: str
