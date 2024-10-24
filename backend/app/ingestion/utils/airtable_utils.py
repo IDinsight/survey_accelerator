@@ -1,6 +1,6 @@
 # utils/airtable_utils.py
 
-from typing import Any, Dict
+from typing import Dict
 
 from app.config import AIRTABLE_API_KEY, AIRTABLE_CONFIGS
 from app.utils import setup_logger
@@ -13,7 +13,7 @@ if not AIRTABLE_API_KEY:
     raise EnvironmentError("Airtable API key not found in environment variables.")
 
 
-def get_airtable_records() -> Dict[str, Dict[str, Any]]:
+def get_airtable_records() -> list | dict:
     """
     Fetch records from Airtable and return a dictionary of metadata keyed by file name.
     """
@@ -32,16 +32,7 @@ def get_airtable_records() -> Dict[str, Dict[str, Any]]:
         api = Api(AIRTABLE_API_KEY)
         table = api.table(base_id, table_name)
         records = table.all()
-
-        metadata_dict = {}
-        for record in records:
-            fields = record.get("fields", {})
-            file_name = fields.get("File Name")
-            if file_name:
-                metadata_dict[file_name] = fields
-            else:
-                logger.warning(f"Record {record.get('id')} missing 'File Name' field.")
-        return metadata_dict
+        return records
 
     except Exception as e:
         logger.error(f"Error fetching records from Airtable: {e}")
