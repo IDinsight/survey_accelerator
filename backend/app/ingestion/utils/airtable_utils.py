@@ -13,7 +13,7 @@ if not AIRTABLE_API_KEY:
     raise EnvironmentError("Airtable API key not found in environment variables.")
 
 
-def get_airtable_records() -> list | dict:
+def get_airtable_records() -> list:
     """
     Fetch records from Airtable and return a dictionary of metadata keyed by file name.
     """
@@ -36,4 +36,4 @@ def get_airtable_records() -> list | dict:
 
     except Exception as e:
         logger.error(f"Error fetching records from Airtable: {e}")
-        return {}
+        return []
