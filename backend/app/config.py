@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,6 +36,7 @@ AIRTABLE_CONFIGS = {
         "TABLE_NAME": os.environ.get("AIRTABLE_TABLE_NAME", "tble3Kf2oWaRZVLJ7"),
     }
 }
+AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")

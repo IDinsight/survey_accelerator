@@ -1,29 +1,25 @@
 # routers.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 import os
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import authenticate_key
 from app.database import get_async_session
-from app.ingestion.schemas import AirtableIngestionResponse
 from app.ingestion.models import save_document_to_db
+from app.ingestion.schemas import AirtableIngestionResponse
 from app.ingestion.utils.airtable_utils import get_airtable_records
+from app.ingestion.utils.file_processing_utils import open_sheet_in_pandas, process_file
 from app.ingestion.utils.google_drive_utils import (
-    get_drive_service,
-    extract_file_id,
     determine_file_type,
     download_file,
-)
-from app.ingestion.utils.file_processing_utils import (
-    process_file,
-    create_directories,
-    open_sheet_in_pandas,
+    extract_file_id,
+    get_drive_service,
 )
 from app.utils import setup_logger
 
 logger = setup_logger()
-
 
 router = APIRouter(
     dependencies=[Depends(authenticate_key)],
@@ -40,12 +36,14 @@ XLSX_SUBDIR = "xlsx_files"
 
 
 @router.post("/airtable", response_model=AirtableIngestionResponse)
-async def ingest_airtable(asession: AsyncSession = Depends(get_async_session)):
+async def ingest_airtable(
+    asession: AsyncSession = Depends(get_async_session),
+) -> AirtableIngestionResponse:
     """
     Ingest documents from Airtable records.
     """
-    contents = get_airtable_records()
-    if not contents:
+    records = get_airtable_records()
+    if not records:
         return AirtableIngestionResponse(
             total_records_processed=0,
             total_chunks_created=0,
@@ -56,16 +54,15 @@ async def ingest_airtable(asession: AsyncSession = Depends(get_async_session)):
     total_records_processed = 0
     total_chunks_created = 0
 
-    create_directories()
-
-    for record in contents:
+    for record in records:
         fields = record.get("fields", {})
         file_name = fields.get("File name")
         gdrive_link = fields.get("Drive link")
 
         if not file_name or not gdrive_link:
             logger.warning(
-                f"Record {record.get('id')} is missing 'File name' or 'Drive link'. Skipping."
+                f"""Record {record.get('id')} is missing 'File name' or 'Drive link'.
+                Skipping."""
             )
             continue
 
@@ -115,17 +112,19 @@ async def ingest_airtable(asession: AsyncSession = Depends(get_async_session)):
             logger.warning(f"No processed pages for file '{file_name}'. Skipping.")
             continue
 
-        # Save to database
+        # Save to database with metadata
         await save_document_to_db(
             processed_pages=processed_pages,
             file_id=file_id,
             file_name=file_name,
             asession=asession,
+            metadata=fields,
         )
 
         total_records_processed += 1
         total_chunks_created += len(processed_pages)
-        print(f"File '{file_name}' processed successfully.")
+        logger.info(f"File '{file_name}' processed successfully.")
+
     return AirtableIngestionResponse(
         total_records_processed=total_records_processed,
         total_chunks_created=total_chunks_created,

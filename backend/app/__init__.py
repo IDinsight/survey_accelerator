@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis import asyncio as aioredis
 
-from . import ingestion
+from . import ingestion, search
 from .config import REDIS_HOST
 from .utils import setup_logger
 
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(ingestion.router)
+    app.include_router(search.router)
 
     origins = [
         "http://localhost",

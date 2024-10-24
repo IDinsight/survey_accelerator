@@ -2,16 +2,19 @@
 
 import io
 import os
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-from google.oauth2 import service_account
+from typing import Optional
+
 from app.config import SCOPES, SERVICE_ACCOUNT_FILE, XLSX_SUBDIR
 from app.utils import setup_logger
+from google.oauth2 import service_account
+from googleapiclient.discovery import Resource as DriveResource
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 logger = setup_logger()
 
 
-def get_drive_service():
+def get_drive_service() -> DriveResource:
     """
     Authenticate using a service account and return the Drive service.
     """
@@ -22,28 +25,49 @@ def get_drive_service():
     return drive_service
 
 
-def extract_file_id(gdrive_url):
+def extract_file_id(gdrive_url: str) -> str:
     """
     Extract the file ID from a Google Drive URL.
+
+    Supports URLs of the form:
+    - https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+    - https://drive.google.com/open?id=FILE_ID
+    - Any URL containing 'id=FILE_ID'
     """
-    try:
-        if "id=" in gdrive_url:
-            return gdrive_url.split("id=")[1].split("&")[0]
+    if "id=" in gdrive_url:
+        # URL contains 'id=FILE_ID'
+        file_id = gdrive_url.split("id=")[1].split("&")[0]
+        if file_id:
+            return file_id
         else:
-            # Handle URLs of the form https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-            parts = gdrive_url.split("/")
-            if "d" in parts:
-                d_index = parts.index("d")
-                return parts[d_index + 1]
-            else:
+            raise ValueError(
+                "Invalid Google Drive URL format: missing file ID after 'id='."
+            )
+    else:
+        # Handle URLs of the form 'https://drive.google.com/file/d/FILE_ID/...'
+        parts = gdrive_url.strip("/").split("/")
+        if "d" in parts:
+            d_index = parts.index("d")
+            try:
+                file_id = parts[d_index + 1]
+                if file_id:
+                    return file_id
+                else:
+                    raise ValueError(
+                        "Invalid Google Drive URL format: missing file ID after '/d/'."
+                    )
+            except IndexError as e:
                 raise ValueError(
-                    "URL format not recognized. Ensure it contains 'id=' or follows the standard Drive URL format."
-                )
-    except (IndexError, ValueError):
-        raise ValueError("Invalid Google Drive URL format.")
+                    "Invalid Google Drive URL format: incomplete URL."
+                ) from e
+        else:
+            raise ValueError(
+                """URL format not recognized. Ensure it contains 'id=' or
+                follows the standard Drive URL format."""
+            )
 
 
-def determine_file_type(file_name):
+def determine_file_type(file_name: str) -> str:
     """
     Determine the file type based on the file extension.
     """
@@ -56,9 +80,11 @@ def determine_file_type(file_name):
         return "other"
 
 
-def download_file(file_id, file_name, file_type, drive_service):
+def download_file(
+    file_id: str, file_name: str, file_type: str, drive_service: DriveResource
+) -> Optional[io.BytesIO]:
     """
-    Download a file from Google Drive using its file ID and handle it based on file type.
+    Download a file from Google Drive using its file ID and handle it based on file type
     For PDFs, download into memory and return the BytesIO object.
     For XLSX, download and save to disk.
     """
@@ -86,8 +112,8 @@ def download_file(file_id, file_name, file_type, drive_service):
                     else file_name
                 ),
             )
-            with io.FileIO(save_path, "wb") as fh:
-                downloader = MediaIoBaseDownload(fh, request)
+            with open(save_path, "wb") as xlsx_file:
+                downloader = MediaIoBaseDownload(xlsx_file, request)
                 done = False
                 while not done:
                     status, done = downloader.next_chunk()
@@ -95,23 +121,13 @@ def download_file(file_id, file_name, file_type, drive_service):
         elif file_type == "pdf":
             # Download PDF files into memory
             request = drive_service.files().get_media(fileId=file_id)
-            fh = io.BytesIO()
-            downloader = MediaIoBaseDownload(fh, request)
+            pdf_buffer = io.BytesIO()
+            downloader = MediaIoBaseDownload(pdf_buffer, request)
             done = False
             while not done:
                 status, done = downloader.next_chunk()
-            fh.seek(0)  # Reset buffer position to the beginning
-            return fh  # Return the in-memory file
-        elif file_type == "xlsx":
-            # Download existing .xlsx files that are not Google Sheets
-            request = drive_service.files().get_media(fileId=file_id)
-            save_path = os.path.join(XLSX_SUBDIR, file_name)
-            with io.FileIO(save_path, "wb") as fh:
-                downloader = MediaIoBaseDownload(fh, request)
-                done = False
-                while not done:
-                    status, done = downloader.next_chunk()
-            return None  # No need to return anything for XLSX
+            pdf_buffer.seek(0)  # Reset buffer position to the beginning
+            return pdf_buffer  # Return the in-memory file for PDFs
         else:
             return None
 
