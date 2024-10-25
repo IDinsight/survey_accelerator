@@ -31,10 +31,14 @@ const AdvancedSearchEngine: React.FC = () => {
   return (
     <div className="h-screen flex">
       {/* Left Side - Search Form and Results */}
-      <div className="w-1/2 p-6 flex flex-col">
+      <div className="w-1/3 p-6 flex flex-col">
         {/* Search Form */}
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold mb-4">Advanced Search</h2>
+          <img
+              src="Banner.png"
+              alt="Banner"
+              className="w-full h-auto object-cover"
+            />
           <form onSubmit={handleSearch} className="space-y-4">
             {/* Search Query */}
             <input
@@ -43,7 +47,8 @@ const AdvancedSearchEngine: React.FC = () => {
               placeholder="Enter your search query"
               className="w-full p-2 border rounded"
               required
-            />
+            /><div className="mb-6">
+          </div>
 
             {/* Country Dropdown */}
             <select name="country" className="w-full p-2 border rounded">
@@ -99,7 +104,7 @@ const AdvancedSearchEngine: React.FC = () => {
       </div>
 
       {/* Right Side - PDF Viewer */}
-      <div className="w-1/2 border-l p-6">
+      <div className="w-2/3 border-l p-6">
         {selectedPDF ? (
           <object
             data={selectedPDF}
