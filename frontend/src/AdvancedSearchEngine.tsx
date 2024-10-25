@@ -35,7 +35,7 @@ const AdvancedSearchEngine: React.FC = () => {
         {/* Search Form */}
         <div className="mb-6">
           <img
-              src="Banner.png"
+              src="banner.png"
               alt="Banner"
               className="w-full h-auto object-cover"
             />
