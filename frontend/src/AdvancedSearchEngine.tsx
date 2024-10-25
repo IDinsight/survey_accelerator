@@ -50,6 +50,15 @@ const AdvancedSearchEngine: React.FC = () => {
             /><div className="mb-6">
           </div>
 
+
+            {/* Region Dropdown */}
+            <select name="region" className="w-full p-2 border rounded">
+            <option value="">Select Region</option>
+            {regions.map((region) => (
+            <option key={region} value={region}>{region}</option>
+            ))}
+            </select>
+
             {/* Country Dropdown */}
             <select name="country" className="w-full p-2 border rounded">
               <option value="">Select Country</option>
@@ -63,14 +72,6 @@ const AdvancedSearchEngine: React.FC = () => {
               <option value="">Select Organization</option>
               {organizations.map((org) => (
                 <option key={org} value={org}>{org}</option>
-              ))}
-            </select>
-
-            {/* Region Dropdown */}
-            <select name="region" className="w-full p-2 border rounded">
-              <option value="">Select Region</option>
-              {regions.map((region) => (
-                <option key={region} value={region}>{region}</option>
               ))}
             </select>
 
