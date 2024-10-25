@@ -39,7 +39,7 @@ AIRTABLE_CONFIGS = {
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 # OpenAI Configuration
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY_SA")
 
 # Google API Configurations
 SCOPES = [

@@ -1,22 +1,17 @@
-# routers.py
+"""
+Code for the ingestion router.
+"""
 
-import os
+import asyncio
+from typing import Any, Dict, Tuple
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from tqdm.asyncio import tqdm_asyncio
 
 from app.auth.dependencies import authenticate_key
-from app.database import get_async_session
-from app.ingestion.models import save_document_to_db
 from app.ingestion.schemas import AirtableIngestionResponse
 from app.ingestion.utils.airtable_utils import get_airtable_records
-from app.ingestion.utils.file_processing_utils import open_sheet_in_pandas, process_file
-from app.ingestion.utils.google_drive_utils import (
-    determine_file_type,
-    download_file,
-    extract_file_id,
-    get_drive_service,
-)
+from app.ingestion.utils.record_processing import process_record
 from app.utils import setup_logger
 
 logger = setup_logger()
@@ -32,15 +27,11 @@ TAG_METADATA = {
     "description": "Endpoints for ingesting documents.",
 }
 
-XLSX_SUBDIR = "xlsx_files"
-
 
 @router.post("/airtable", response_model=AirtableIngestionResponse)
-async def ingest_airtable(
-    asession: AsyncSession = Depends(get_async_session),
-) -> AirtableIngestionResponse:
+async def ingest_airtable() -> AirtableIngestionResponse:
     """
-    Ingest documents from Airtable records.
+    Ingest documents from Airtable records with page-level progress logging.
     """
     records = get_airtable_records()
     if not records:
@@ -50,80 +41,35 @@ async def ingest_airtable(
             message="No records found in Airtable.",
         )
 
-    drive_service = get_drive_service()
     total_records_processed = 0
     total_chunks_created = 0
 
-    for record in records:
-        fields = record.get("fields", {})
-        file_name = fields.get("File name")
-        gdrive_link = fields.get("Drive link")
+    # Create an asynchronous lock for progress bar updates
+    progress_lock = asyncio.Lock()
 
-        if not file_name or not gdrive_link:
-            logger.warning(
-                f"""Record {record.get('id')} is missing 'File name' or 'Drive link'.
-                Skipping."""
-            )
-            continue
+    # Initialize the progress bar without a total
+    progress_bar = tqdm_asyncio(desc="Processing pages", unit="page", total=0)
 
-        # Determine file type
-        file_type = determine_file_type(file_name)
-        if file_type == "other":
-            logger.warning(
-                f"File '{file_name}' has an unsupported extension. Skipping."
-            )
-            continue
+    # Limit the number of concurrent tasks to prevent resource exhaustion
+    semaphore = asyncio.Semaphore(10)  # Adjust the number as needed
 
-        # Extract file ID from Drive link
-        try:
-            file_id = extract_file_id(gdrive_link)
-        except ValueError as ve:
-            logger.error(f"Error processing file '{file_name}': {ve}. Skipping.")
-            continue
+    async def process_with_semaphore(record: Dict[str, Any]) -> Tuple[int, int]:
+        """Semaphore-protected function to process a record."""
+        async with semaphore:
+            return await process_record(record, progress_bar, progress_lock)
 
-        # Download the file
-        file_buffer = download_file(file_id, file_name, file_type, drive_service)
+    # Create a list of tasks to process records concurrently
+    tasks = [process_with_semaphore(record) for record in records]
 
-        if not file_buffer and file_type != "xlsx":
-            logger.error(f"Failed to download file '{file_name}'. Skipping.")
-            continue
+    # Run tasks concurrently
+    results = await asyncio.gather(*tasks)
 
-        # If the file is an Excel file, optionally load it into pandas
-        if file_type == "xlsx":
-            excel_path = os.path.join(
-                XLSX_SUBDIR,
-                (
-                    file_name
-                    if file_name.lower().endswith(".xlsx")
-                    else f"{file_name}.xlsx"
-                ),
-            )
-            df = open_sheet_in_pandas(excel_path)
-            if df is not None:
-                logger.info(f"Excel file '{file_name}' loaded successfully.")
-            else:
-                logger.warning(f"Failed to load Excel file '{file_name}'.")
-            continue  # Assuming we don't process Excel files further
+    # Sum up the totals from each task
+    for records_processed, chunks_created in results:
+        total_records_processed += records_processed
+        total_chunks_created += chunks_created
 
-        # Process the file
-        processed_pages = process_file(file_buffer, file_name, file_type)
-
-        if not processed_pages:
-            logger.warning(f"No processed pages for file '{file_name}'. Skipping.")
-            continue
-
-        # Save to database with metadata
-        await save_document_to_db(
-            processed_pages=processed_pages,
-            file_id=file_id,
-            file_name=file_name,
-            asession=asession,
-            metadata=fields,
-        )
-
-        total_records_processed += 1
-        total_chunks_created += len(processed_pages)
-        logger.info(f"File '{file_name}' processed successfully.")
+    progress_bar.close()
 
     return AirtableIngestionResponse(
         total_records_processed=total_records_processed,

@@ -1,9 +1,10 @@
 # utils/openai_utils.py
 
-import openai
-from app.config import OPENAI_API_KEY
-from app.utils import setup_logger
 import os
+
+import openai
+
+from app.utils import setup_logger
 
 logger = setup_logger()
 
@@ -11,7 +12,7 @@ logger = setup_logger()
 client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def generate_contextual_summary(document_content, chunk_content):
+def generate_contextual_summary(document_content: str, chunk_content: str) -> str:
     """
     Generate a concise contextual summary for a chunk using OpenAI's GPT-4.
     """
@@ -25,13 +26,15 @@ def generate_contextual_summary(document_content, chunk_content):
     {chunk_content}
     </chunk>
 
-    Please give a short succinct context to situate this chunk within the overall document which is a survey questionnaire for the purposes of improving search retrieval of the chunk.
+    Please give a short succinct context to situate this chunk within the overall
+    document     which is a survey questionnaire for the purposes of improving search
+    retrieval of the chunk.
     Answer only with the succinct context and nothing else.
     """
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "user", "content": prompt},
             ],

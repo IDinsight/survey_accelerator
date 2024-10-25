@@ -1,10 +1,13 @@
 # utils/file_processing_utils.py
 
+import asyncio
 from typing import Any, BinaryIO, Dict, List, Optional
 
 import pandas as pd
 import PyPDF2
 import tiktoken
+import tqdm
+
 from app.ingestion.utils.embedding_utils import create_embedding
 from app.ingestion.utils.openai_utils import generate_contextual_summary
 from app.utils import setup_logger
@@ -12,44 +15,63 @@ from app.utils import setup_logger
 logger = setup_logger()
 
 
-def parse_file(file_buffer: BinaryIO, file_type: str) -> List[str]:
+async def parse_file(file_buffer: BinaryIO, file_type: str) -> List[str]:
     """
-    Parse the content of an uploaded file into chunks.
+    Parse the content of an uploaded file into chunks asynchronously.
     For PDFs, each page is treated as its own chunk.
-    For other file types, handle accordingly.
     """
     if file_type == "pdf":
-        pdf_reader = PyPDF2.PdfReader(file_buffer)
-        chunks: List[str] = []
-        num_pages = len(pdf_reader.pages)
-        for page_num in range(num_pages):
-            page = pdf_reader.pages[page_num]
-            page_text = page.extract_text()
-            if page_text and page_text.strip():
-                chunks.append(page_text.strip())
-        if not chunks:
-            raise RuntimeError("No text could be extracted from the uploaded PDF file.")
+        # Run the parsing in a thread to avoid blocking the event loop
+        chunks = await asyncio.to_thread(parse_pdf_file, file_buffer)
     else:
         # Handle other file types if needed
         chunks = []
     return chunks
 
 
-def process_file(
-    file_buffer: BinaryIO, file_name: str, file_type: str
+def parse_pdf_file(file_buffer: BinaryIO) -> List[str]:
+    """
+    Synchronously parse a PDF file into a list of page texts.
+    """
+    pdf_reader = PyPDF2.PdfReader(file_buffer)
+    chunks: List[str] = []
+    num_pages = len(pdf_reader.pages)
+    for page_num in range(num_pages):
+        page = pdf_reader.pages[page_num]
+        page_text = page.extract_text()
+        if page_text and page_text.strip():
+            chunks.append(page_text.strip())
+    if not chunks:
+        raise RuntimeError("No text could be extracted from the uploaded PDF file.")
+    return chunks
+
+
+async def process_file(
+    file_buffer: BinaryIO,
+    file_name: str,
+    file_type: str,
+    progress_bar: tqdm.tqdm,
+    progress_lock: asyncio.Lock,
 ) -> List[Dict[str, Any]]:
     """
     Process the file by parsing, generating summaries, and creating embeddings.
+    Updates the progress bar after processing each page.
     """
     # Ensure file_buffer is not None
     if file_buffer is None:
         logger.warning(f"No file buffer provided for file '{file_name}'. Skipping.")
         return []
 
-    chunks = parse_file(file_buffer, file_type)
+    # Parse the file asynchronously
+    chunks = await parse_file(file_buffer, file_type)
     if not chunks:
         logger.warning(f"No text extracted from file '{file_name}'. Skipping.")
         return []
+
+    # Update the progress bar total with the number of pages
+    async with progress_lock:
+        progress_bar.total += len(chunks)
+        progress_bar.refresh()
 
     # Combine all chunks into a single document_content
     document_content = "\n\n".join(chunks)
@@ -58,8 +80,7 @@ def process_file(
     encoding = tiktoken.encoding_for_model("gpt-4")  # Adjust the model name if needed
 
     # Define model's max context length
-    MAX_CONTEXT_LENGTH = 128000  # For GPT-4o
-    # Alternatively, if you're using a different model, adjust accordingly
+    MAX_CONTEXT_LENGTH = 8192  # Adjust according to your model's context length
 
     # Estimate the tokens used by the prompt template
     prompt_template = """
@@ -84,6 +105,7 @@ def process_file(
     )
 
     processed_pages: List[Dict[str, Any]] = []
+
     for page_num, page_text in enumerate(chunks):
         # Tokenize the chunk content
         chunk_tokens = len(encoding.encode(page_text))
@@ -98,8 +120,10 @@ def process_file(
             )
             continue
 
-        # Truncate document_content if necessary
+        # Tokenize document_content
         document_tokens = encoding.encode(document_content)
+
+        # Truncate document_content if necessary
         if len(document_tokens) > available_tokens:
             # Truncate document_content to fit available tokens
             truncated_document_tokens = document_tokens[:available_tokens]
@@ -107,20 +131,24 @@ def process_file(
         else:
             truncated_document_content = document_content
 
-        # Generate contextual summary
-        context = generate_contextual_summary(truncated_document_content, page_text)
+        # Generate contextual summary asynchronously
+        context = await asyncio.to_thread(
+            generate_contextual_summary, truncated_document_content, page_text
+        )
+
         if not context:
             logger.warning(
-                f"""Contextual summary generation failed for page {page_num + 1} in
-                file '{file_name}'. Skipping."""
+                f"""Contextual summary generation failed for page {page_num + 1}
+                in file '{file_name}'. Skipping."""
             )
             continue
 
         # Combine context with chunk text
         contextualized_chunk = f"{context}\n\n{page_text}"
 
-        # Create embedding
-        embedding = create_embedding(contextualized_chunk)
+        # Create embedding asynchronously
+        embedding = await asyncio.to_thread(create_embedding, contextualized_chunk)
+
         if embedding is None:
             logger.warning(
                 f"""Embedding generation failed for page {page_num + 1} in
@@ -135,6 +163,11 @@ def process_file(
                 "embedding": embedding,
             }
         )
+
+        # Update progress bar after processing each page
+        async with progress_lock:
+            progress_bar.update(1)
+
     return processed_pages
 
 
