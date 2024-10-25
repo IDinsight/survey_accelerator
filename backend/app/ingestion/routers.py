@@ -1,17 +1,16 @@
-"""
-Code for the ingestion router.
-"""
+# routers.py
 
-import asyncio
-from typing import Any, Dict, Tuple
+from typing import List
 
-from fastapi import APIRouter, Depends
-from tqdm.asyncio import tqdm_asyncio
+from fastapi import APIRouter, Body, Depends
 
 from app.auth.dependencies import authenticate_key
 from app.ingestion.schemas import AirtableIngestionResponse
-from app.ingestion.utils.airtable_utils import get_airtable_records
-from app.ingestion.utils.record_processing import process_record
+from app.ingestion.utils.airtable_utils import (
+    get_airtable_records,
+    get_missing_document_ids,
+)
+from app.ingestion.utils.record_processing import ingest_records
 from app.utils import setup_logger
 
 logger = setup_logger()
@@ -23,15 +22,18 @@ router = APIRouter(
 )
 
 TAG_METADATA = {
-    "name": "Document Ingestion",
-    "description": "Endpoints for ingesting documents.",
+    "name": "Ingestion",
+    "description": "Endpoints for ingesting documents from Airtable records",
 }
 
 
 @router.post("/airtable", response_model=AirtableIngestionResponse)
-async def ingest_airtable() -> AirtableIngestionResponse:
+async def ingest_airtable(
+    ids: List[int] = Body(..., embed=True),
+) -> AirtableIngestionResponse:
     """
     Ingest documents from Airtable records with page-level progress logging.
+    Accepts a list of document IDs to process.
     """
     records = get_airtable_records()
     if not records:
@@ -41,38 +43,62 @@ async def ingest_airtable() -> AirtableIngestionResponse:
             message="No records found in Airtable.",
         )
 
-    total_records_processed = 0
-    total_chunks_created = 0
+    # Map IDs to records
+    airtable_id_to_record = {}
+    for record in records:
+        fields = record.get("fields", {})
+        id_value = fields.get("ID")
+        if id_value is not None:
+            airtable_id_to_record[id_value] = record
 
-    # Create an asynchronous lock for progress bar updates
-    progress_lock = asyncio.Lock()
+    records_to_process = [
+        airtable_id_to_record[id_] for id_ in ids if id_ in airtable_id_to_record
+    ]
+    if not records_to_process:
+        return AirtableIngestionResponse(
+            total_records_processed=0,
+            total_chunks_created=0,
+            message="No matching records found for the provided IDs.",
+        )
 
-    # Initialize the progress bar without a total
-    progress_bar = tqdm_asyncio(desc="Processing pages", unit="page", total=0)
+    return await ingest_records(records_to_process)
 
-    # Limit the number of concurrent tasks to prevent resource exhaustion
-    semaphore = asyncio.Semaphore(10)  # Adjust the number as needed
 
-    async def process_with_semaphore(record: Dict[str, Any]) -> Tuple[int, int]:
-        """Semaphore-protected function to process a record."""
-        async with semaphore:
-            return await process_record(record, progress_bar, progress_lock)
+@router.post("/airtable/refresh", response_model=AirtableIngestionResponse)
+async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
+    """
+    Refresh the list of documents by comparing Airtable 'ID' fields with database
+    'document_id's. Automatically ingest the missing documents.
+    """
+    records = get_airtable_records()
+    if not records:
+        return AirtableIngestionResponse(
+            total_records_processed=0,
+            total_chunks_created=0,
+            message="No records found in Airtable.",
+        )
 
-    # Create a list of tasks to process records concurrently
-    tasks = [process_with_semaphore(record) for record in records]
+    # Get missing IDs
+    missing_ids = await get_missing_document_ids(records)
+    if not missing_ids:
+        return AirtableIngestionResponse(
+            total_records_processed=0,
+            total_chunks_created=0,
+            message="No new documents to ingest.",
+        )
 
-    # Run tasks concurrently
-    results = await asyncio.gather(*tasks)
+    # Map IDs to records
+    airtable_id_to_record = {}
+    for record in records:
+        fields = record.get("fields", {})
+        id_value = fields.get("ID")
+        if id_value is not None:
+            airtable_id_to_record[id_value] = record
 
-    # Sum up the totals from each task
-    for records_processed, chunks_created in results:
-        total_records_processed += records_processed
-        total_chunks_created += chunks_created
+    records_to_process = [
+        airtable_id_to_record[id_]
+        for id_ in missing_ids
+        if id_ in airtable_id_to_record
+    ]
 
-    progress_bar.close()
-
-    return AirtableIngestionResponse(
-        total_records_processed=total_records_processed,
-        total_chunks_created=total_chunks_created,
-        message="Ingestion completed.",
-    )
+    return await ingest_records(records_to_process)

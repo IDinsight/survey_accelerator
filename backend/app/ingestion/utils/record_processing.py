@@ -1,13 +1,14 @@
-# record_processing.py
+# utils/record_processing.py
 
 import asyncio
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import tqdm
 
 from app.database import get_async_session
 from app.ingestion.models import save_document_to_db
+from app.ingestion.schemas import AirtableIngestionResponse
 from app.ingestion.utils.file_processing_utils import (
     open_sheet_in_pandas,
     process_file,
@@ -27,30 +28,30 @@ XLSX_SUBDIR = "xlsx_files"
 
 async def process_record(
     record: Dict[str, Any],
-    progress_bar: tqdm.tqdm,  # Add type annotation
-    progress_lock: asyncio.Lock,  # Add type annotation
+    progress_bar: tqdm.tqdm,
+    progress_lock: asyncio.Lock,
 ) -> Tuple[int, int]:
     """
     Process a single record from Airtable.
 
     Args:
         record (Dict[str, Any]): The record to process.
-        progress_bar: The tqdm progress bar instance.
-        progress_lock: An asyncio.Lock to synchronize progress bar updates.
+        progress_bar (tqdm.tqdm): The tqdm progress bar instance.
+        progress_lock (asyncio.Lock): An asyncio.Lock to synchronize progress
+        bar updates.
 
     Returns:
-        A tuple containing:
-        - records_processed (int): Number of records successfully processed (0 or 1).
-        - chunks_created (int): Number of chunks created from the file.
+        Tuple[int, int]: Number of records processed and chunks created.
     """
     fields = record.get("fields", {})
     file_name = fields.get("File name")
     gdrive_link = fields.get("Drive link")
+    document_id = fields.get("ID")  # Get the 'ID' field for document_id
 
-    if not file_name or not gdrive_link:
+    if not file_name or not gdrive_link or document_id is None:
         logger.warning(
-            f"""Record {record.get('id')} is missing
-            'File name' or 'Drive link'. Skipping."""
+            f"""Record {record.get('id')} is missing 'File name',
+            'Drive link', or 'ID'. Skipping."""
         )
         return (0, 0)
 
@@ -125,3 +126,50 @@ async def process_record(
     logger.info(f"File '{file_name}' processed successfully.")
 
     return (1, len(processed_pages))
+
+
+async def ingest_records(records: List[Dict[str, Any]]) -> AirtableIngestionResponse:
+    """
+    Ingest a list of Airtable records.
+
+    Args:
+        records (List[Dict[str, Any]]): The list of Airtable records to process.
+
+    Returns:
+        AirtableIngestionResponse: The response containing ingestion results.
+    """
+    total_records_processed = 0
+    total_chunks_created = 0
+
+    # Create an asynchronous lock for progress bar updates
+    progress_lock = asyncio.Lock()
+
+    # Initialize the progress bar without a total
+    progress_bar = tqdm.tqdm(desc="Processing pages", unit="page", total=0)
+
+    # Limit the number of concurrent tasks to prevent resource exhaustion
+    semaphore = asyncio.Semaphore(10)  # Adjust the number as needed
+
+    async def process_with_semaphore(record: Dict[str, Any]) -> Tuple[int, int]:
+        """Semaphore-protected function to process a record."""
+        async with semaphore:
+            return await process_record(record, progress_bar, progress_lock)
+
+    # Create a list of tasks to process records concurrently
+    tasks = [process_with_semaphore(record) for record in records]
+
+    # Run tasks concurrently
+    results = await asyncio.gather(*tasks)
+
+    # Sum up the totals from each task
+    for records_processed, chunks_created in results:
+        total_records_processed += records_processed
+        total_chunks_created += chunks_created
+
+    progress_bar.close()
+
+    return AirtableIngestionResponse(
+        total_records_processed=total_records_processed,
+        total_chunks_created=total_chunks_created,
+        message=f"Ingestion completed. Processed {total_records_processed} documents.",
+    )

@@ -73,7 +73,7 @@ class DocumentDB(Base):
     date_added: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    document_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    document_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
 
 
 async def save_document_to_db(
