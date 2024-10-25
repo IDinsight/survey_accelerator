@@ -2,7 +2,7 @@
 
 import os
 from collections import OrderedDict
-from typing import List, Tuple
+from typing import Tuple
 
 import cohere
 from sqlalchemy import func, select
@@ -42,8 +42,8 @@ async def embed_query(query: str) -> cohere.EmbedResponse:
 
 
 async def perform_semantic_search(
-    session: AsyncSession, embedding: List[float], top_k: int
-) -> List[Tuple[DocumentDB, float]]:
+    session: AsyncSession, embedding: list[float], top_k: int
+) -> list[Tuple[DocumentDB, float]]:
     """
     Perform semantic search using pgvector to find similar document embeddings.
     Returns a list of tuples (DocumentDB, distance).
@@ -65,7 +65,7 @@ async def perform_semantic_search(
 
 async def perform_keyword_search(
     session: AsyncSession, query_str: str, top_k: int
-) -> List[Tuple[DocumentDB, float]]:
+) -> list[Tuple[DocumentDB, float]]:
     """
     Perform keyword-based search using PostgreSQL's full-text search capabilities.
     Returns a list of tuples (DocumentDB, rank).
@@ -96,7 +96,7 @@ async def perform_keyword_search(
 
 async def hybrid_search(
     session: AsyncSession, query_str: str, top_k: int
-) -> List[RerankedDocument]:
+) -> list[RerankedDocument]:
     """
     Combine semantic and keyword search results, remove duplicates, and re-rank.
     """

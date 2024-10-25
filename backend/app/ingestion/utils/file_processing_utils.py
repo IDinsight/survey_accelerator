@@ -1,7 +1,7 @@
 # utils/file_processing_utils.py
 
 import asyncio
-from typing import Any, BinaryIO, Dict, List, Optional
+from typing import Any, BinaryIO, Dict, Optional
 
 import pandas as pd
 import PyPDF2
@@ -15,7 +15,7 @@ from app.utils import setup_logger
 logger = setup_logger()
 
 
-async def parse_file(file_buffer: BinaryIO, file_type: str) -> List[str]:
+async def parse_file(file_buffer: BinaryIO, file_type: str) -> list[str]:
     """
     Parse the content of an uploaded file into chunks asynchronously.
     For PDFs, each page is treated as its own chunk.
@@ -29,12 +29,12 @@ async def parse_file(file_buffer: BinaryIO, file_type: str) -> List[str]:
     return chunks
 
 
-def parse_pdf_file(file_buffer: BinaryIO) -> List[str]:
+def parse_pdf_file(file_buffer: BinaryIO) -> list[str]:
     """
     Synchronously parse a PDF file into a list of page texts.
     """
     pdf_reader = PyPDF2.PdfReader(file_buffer)
-    chunks: List[str] = []
+    chunks: list[str] = []
     num_pages = len(pdf_reader.pages)
     for page_num in range(num_pages):
         page = pdf_reader.pages[page_num]
@@ -52,7 +52,7 @@ async def process_file(
     file_type: str,
     progress_bar: tqdm.tqdm,
     progress_lock: asyncio.Lock,
-) -> List[Dict[str, Any]]:
+) -> list[Dict[str, Any]]:
     """
     Process the file by parsing, generating summaries, and creating embeddings.
     Updates the progress bar after processing each page.
@@ -104,7 +104,7 @@ async def process_file(
         encoding.encode(prompt_template.format(document_content="", chunk_content=""))
     )
 
-    processed_pages: List[Dict[str, Any]] = []
+    processed_pages: list[Dict[str, Any]] = []
 
     for page_num, page_text in enumerate(chunks):
         # Tokenize the chunk content

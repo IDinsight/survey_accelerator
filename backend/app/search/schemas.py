@@ -1,7 +1,7 @@
 # app/search/schemas.py
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -31,9 +31,9 @@ class DocumentMetadata(BaseModel):
     page_number: int
     created_datetime_utc: datetime
     updated_datetime_utc: datetime
-    countries: Optional[List[str]] = None
-    organizations: Optional[List[str]] = None
-    regions: Optional[List[str]] = None
+    countries: Optional[list[str]] = None
+    organizations: Optional[list[str]] = None
+    regions: Optional[list[str]] = None
     notes: Optional[str] = None
     drive_link: Optional[str] = None
     year: Optional[int] = None
@@ -56,5 +56,5 @@ class SearchResponse(BaseModel):
     """Final schema for the search response."""
 
     query: str
-    results: List[RerankedDocument]
+    results: list[RerankedDocument]
     message: Optional[str] = "Search completed successfully."

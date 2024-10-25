@@ -10,3 +10,10 @@ PyPDF2==3.0.1
 pgvector==0.3.5
 sentence-transformers==3.2.0
 python-multipart==0.0.12
+openai==1.51.2
+google-api-python-client==2.129.0
+google-auth==2.35.0
+google-auth-httplib2==0.2.0
+cohere==5.11.1
+pandas==2.2.2
+pyairtable==2.3.4

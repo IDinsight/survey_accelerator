@@ -1,7 +1,5 @@
 # routers.py
 
-from typing import List
-
 from fastapi import APIRouter, Body, Depends
 
 from app.auth.dependencies import authenticate_key
@@ -29,7 +27,7 @@ TAG_METADATA = {
 
 @router.post("/airtable", response_model=AirtableIngestionResponse)
 async def ingest_airtable(
-    ids: List[int] = Body(..., embed=True),
+    ids: list[int] = Body(..., embed=True),
 ) -> AirtableIngestionResponse:
     """
     Ingest documents from Airtable records with page-level progress logging.

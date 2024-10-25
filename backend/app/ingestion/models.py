@@ -3,7 +3,7 @@ database helper functions such as saving, updating, deleting, and retrieving doc
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, Index, Integer, String, Text
@@ -64,9 +64,9 @@ class DocumentDB(Base):
         DateTime(timezone=True), onupdate=datetime.now(timezone.utc), nullable=False
     )
 
-    countries: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
-    organizations: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
-    regions: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
+    countries: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
+    organizations: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
+    regions: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     drive_link: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -78,7 +78,7 @@ class DocumentDB(Base):
 
 async def save_document_to_db(
     *,
-    processed_pages: List[dict],
+    processed_pages: list[dict],
     file_id: str,
     file_name: str,
     asession: AsyncSession,

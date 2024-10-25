@@ -2,17 +2,14 @@
 
 import asyncio
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import tqdm
 
 from app.database import get_async_session
 from app.ingestion.models import save_document_to_db
 from app.ingestion.schemas import AirtableIngestionResponse
-from app.ingestion.utils.file_processing_utils import (
-    open_sheet_in_pandas,
-    process_file,
-)
+from app.ingestion.utils.file_processing_utils import open_sheet_in_pandas, process_file
 from app.ingestion.utils.google_drive_utils import (
     determine_file_type,
     download_file,
@@ -128,12 +125,12 @@ async def process_record(
     return (1, len(processed_pages))
 
 
-async def ingest_records(records: List[Dict[str, Any]]) -> AirtableIngestionResponse:
+async def ingest_records(records: list[Dict[str, Any]]) -> AirtableIngestionResponse:
     """
     Ingest a list of Airtable records.
 
     Args:
-        records (List[Dict[str, Any]]): The list of Airtable records to process.
+        records (list[Dict[str, Any]]): The list of Airtable records to process.
 
     Returns:
         AirtableIngestionResponse: The response containing ingestion results.
