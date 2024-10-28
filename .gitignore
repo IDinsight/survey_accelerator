@@ -159,3 +159,6 @@ dmypy.json
 .idea/
 
 node_modules/
+
+# Exclude Google Cloud Platform credentials
+gcp_credentials.json
