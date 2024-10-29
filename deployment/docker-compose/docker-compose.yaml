@@ -1,0 +1,33 @@
+version: '3.8'
+
+
+services:
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./.backend.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - temp:/usr/src/aaq_backend/temp
+      - ./backend/.gcp_credentials.json:/app/credentials.json
+    depends_on:
+      - postgres
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    env_file:
+      - ./.backend.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports: # Expose the port to port 5434 on the host machine for debugging
+      - 5434:5432
+
+
+volumes:
+  temp:
+  postgres_data:
