@@ -148,13 +148,20 @@ const AdvancedSearchEngine: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left Side - Search Form and Results */}
-      <div className="w-1/3 p-6 overflow-y-auto">
+      <div
+        className="p-6 overflow-y-auto shadow-2xl relative"
+        style={{
+          width: '28%',
+          background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)', // Very subtle transition to a slightly darker blue
+          padding: '20px' // Create a visible gap with a consistent inner padding
+        }}
+      >
         {/* Search Form */}
         <div className="mb-6">
           <img
             src="banner.png"
             alt="Banner"
-            className="w-full h-auto object-cover mb-4 rounded-lg"
+            className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg"
           />
           <div className={`transition-all duration-500 ease-in-out ${searchCollapsed ? 'h-0 overflow-hidden' : 'h-auto'}`}>
             {!searchCollapsed && (
@@ -164,32 +171,32 @@ const AdvancedSearchEngine: React.FC = () => {
                   name="search"
                   type="text"
                   placeholder="Enter your search query"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded shadow-md focus:outline-none"
                   required
                 />
                 {/* Region Dropdown */}
-                <select name="region" className="w-full p-2 border rounded">
+                <select name="region" className="w-full p-2 border rounded shadow-md">
                   <option value="">Select Region</option>
                   {regions.map((region) => (
                     <option key={region} value={region}>{region}</option>
                   ))}
                 </select>
                 {/* Country Dropdown */}
-                <select name="country" className="w-full p-2 border rounded">
+                <select name="country" className="w-full p-2 border rounded shadow-md">
                   <option value="">Select Country</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
                 </select>
                 {/* Organization Dropdown */}
-                <select name="organization" className="w-full p-2 border rounded">
+                <select name="organization" className="w-full p-2 border rounded shadow-sm">
                   <option value="">Select Organization</option>
                   {organizations.map((org) => (
                     <option key={org} value={org}>{org}</option>
                   ))}
                 </select>
                 {/* Precision Question Toggle */}
-                <div className="flex items-center p-2 border rounded-lg">
+                <div className="flex items-center p-2 rounded-lg">
                   <input
                     type="checkbox"
                     id="precisionSearch"
@@ -200,14 +207,14 @@ const AdvancedSearchEngine: React.FC = () => {
                   <label htmlFor="precisionSearch" className="text-base font-medium">Precision Question Search</label>
                 </div>
                 {/* Search Button */}
-                <button type="submit" className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4">
+                <button type="submit" className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4 shadow-md">
                   Search
                 </button>
               </form>
             )}
           </div>
           {searchCollapsed && (
-            <button onClick={handleToggleSearch} className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4">
+            <button onClick={handleToggleSearch} className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4 shadow-md">
               Create another search
             </button>
           )}
@@ -215,11 +222,16 @@ const AdvancedSearchEngine: React.FC = () => {
 
         {/* Search Results */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Search Results:</h3>
+          {searchResults.length > 0 && (
+            <h3 className="text-xl font-semibold">Search Results:</h3>
+          )}
+
           {searchResults.length === 0 ? (
-            <p>No results found.</p>
+            <div className="h-full flex items-center justify-center text-gray-500">
+              Search results will appear here.
+            </div>
           ) : (
-            searchResults.map((result) => (
+            searchResults.map((result, index) => (
               <div
                 key={result.id}
                 onClick={() => handleCardClick(result)}
@@ -228,10 +240,18 @@ const AdvancedSearchEngine: React.FC = () => {
                     selectedCardId === result.id ? 'bg-[#CC7722]' : 'hover:bg-[#000080]'
                   }`
                 }
+                style={{ position: 'relative' }}
               >
                 <h4 className="text-lg font-semibold">{result.title} ({result.year})</h4>
                 <p className="text-sm mt-1">Region: {result.region}, Country: {result.country}, Org: {result.organization}</p>
                 <p className="text-sm mt-2">{result.summary}</p>
+
+                {/* Hits Badge */}
+                <span
+                  className="absolute top-2 right-2 text-xs bg-white text-[#4169E1] px-2 py-1 rounded-full shadow-sm"
+                >
+                  {index + 3} hits
+                </span>
               </div>
             ))
           )}
@@ -239,8 +259,7 @@ const AdvancedSearchEngine: React.FC = () => {
       </div>
 
       {/* Right Side - PDF Viewer */}
-      <div className="w-2/3 p-6 border-l border-gray-300 flex flex-col justify-between">
-        <div className="flex-grow mb-4">
+      <div className="p-6 border-l border-gray-300 flex flex-col justify-between" style={{ width: '72%' }}>        <div className="flex-grow mb-4">
           {selectedPDF ? (
             <iframe
               key={selectedPDF} // Adding key to force re-render on URL change
