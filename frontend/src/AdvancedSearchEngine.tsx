@@ -196,7 +196,7 @@ const AdvancedSearchEngine: React.FC = () => {
                   ))}
                 </select>
                 {/* Precision Question Toggle */}
-                <div className="flex items-center p-2 rounded-lg">
+                <div className="flex items-center p-1 rounded-lg">
                   <input
                     type="checkbox"
                     id="precisionSearch"
@@ -228,7 +228,7 @@ const AdvancedSearchEngine: React.FC = () => {
 
           {searchResults.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-500">
-              Search results will appear here.
+              Search results will appear here
             </div>
           ) : (
             searchResults.map((result, index) => (
@@ -259,7 +259,8 @@ const AdvancedSearchEngine: React.FC = () => {
       </div>
 
       {/* Right Side - PDF Viewer */}
-      <div className="p-6 border-l border-gray-300 flex flex-col justify-between" style={{ width: '72%' }}>        <div className="flex-grow mb-4">
+      <div className="p-6 border-l border-gray-300 flex flex-col justify-between" style={{ width: '72%' }}>
+        <div className="flex-grow mb-4">
           {selectedPDF ? (
             <iframe
               key={selectedPDF} // Adding key to force re-render on URL change
@@ -310,7 +311,7 @@ const AdvancedSearchEngine: React.FC = () => {
             </div>
           ) : (
             <div className="text-gray-500">
-              Highlighted matches will show up here
+              Highlighted matches will appear here
             </div>
           )}
         </div>
