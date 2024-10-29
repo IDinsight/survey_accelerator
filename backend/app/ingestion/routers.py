@@ -40,7 +40,6 @@ async def ingest_airtable(
             total_chunks_created=0,
             message="No records found in Airtable.",
         )
-
     # Map IDs to records
     airtable_id_to_record = {}
     for record in records:

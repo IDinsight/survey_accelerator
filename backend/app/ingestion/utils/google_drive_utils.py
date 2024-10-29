@@ -4,12 +4,13 @@ import io
 import os
 from typing import Optional
 
-from app.config import SCOPES, SERVICE_ACCOUNT_FILE, XLSX_SUBDIR
-from app.utils import setup_logger
 from google.oauth2 import service_account
 from googleapiclient.discovery import Resource as DriveResource
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+
+from app.config import SCOPES, SERVICE_ACCOUNT_FILE_PATH, XLSX_SUBDIR
+from app.utils import setup_logger
 
 logger = setup_logger()
 
@@ -19,7 +20,7 @@ def get_drive_service() -> DriveResource:
     Authenticate using a service account and return the Drive service.
     """
     creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        SERVICE_ACCOUNT_FILE_PATH, scopes=SCOPES
     )
     drive_service = build("drive", "v3", credentials=creds)
     return drive_service

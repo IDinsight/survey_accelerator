@@ -36,6 +36,7 @@ def get_airtable_records() -> list:
         api = Api(AIRTABLE_API_KEY)
         table = api.table(base_id, table_name)
         records = table.all()
+        print(records)
         return records
 
     except Exception as e:

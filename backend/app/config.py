@@ -1,9 +1,5 @@
 import os
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 # PostgreSQL Configurations
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
@@ -46,8 +42,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets.readonly",
 ]
-SERVICE_ACCOUNT_FILE = os.environ.get(
-    "SERVICE_ACCOUNT_FILE",
+SERVICE_ACCOUNT_FILE_PATH = os.environ.get(
+    "SERVICE_ACCOUNT_FILE_PATH",
     "/Users/markbotterill/secrets/survey-accelerator-c3ff88c19ae3.json",
 )
 
