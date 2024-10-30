@@ -52,6 +52,9 @@ class DocumentDB(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
     file_id: Mapped[str] = mapped_column(String(length=36), nullable=False)
     file_name: Mapped[str] = mapped_column(String(length=150), nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String(length=150), nullable=True)
+    summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pdf_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     content_text: Mapped[str] = mapped_column(Text, nullable=False)
     content_embedding: Mapped[Vector] = mapped_column(
