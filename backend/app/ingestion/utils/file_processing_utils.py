@@ -9,7 +9,10 @@ import tiktoken
 import tqdm
 
 from app.ingestion.utils.embedding_utils import create_embedding
-from app.ingestion.utils.openai_utils import generate_contextual_summary
+from app.ingestion.utils.openai_utils import (
+    extract_question_answer_from_page,
+    generate_contextual_summary,
+)
 from app.utils import setup_logger
 
 logger = setup_logger()
@@ -155,12 +158,15 @@ async def process_file(
                 file '{file_name}'. Skipping."""
             )
             continue
+        # Extract questions and answers
+        extracted_question_answers = extract_question_answer_from_page(page_text)
 
         processed_pages.append(
             {
                 "page_number": page_num + 1,
                 "contextualized_chunk": contextualized_chunk,
                 "embedding": embedding,
+                "extracted_question_answers": extracted_question_answers,
             }
         )
 

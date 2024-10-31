@@ -77,6 +77,9 @@ class DocumentDB(Base):
         DateTime(timezone=True), nullable=True
     )
     document_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
+    extracted_question_answers: Mapped[Optional[dict]] = mapped_column(
+        Text, nullable=True
+    )
 
 
 async def save_document_to_db(
@@ -86,6 +89,9 @@ async def save_document_to_db(
     file_name: str,
     asession: AsyncSession,
     metadata: dict,
+    pdf_url: str,
+    summary: str,
+    title: str,
 ) -> None:
     """
     Save documents to the database.
@@ -135,6 +141,10 @@ async def save_document_to_db(
             year=year,
             date_added=date_added,
             document_id=document_id,
+            pdf_url=pdf_url,
+            summary=summary,
+            title=title,
+            extracted_question_answers=page["extracted_question_answers"],
         )
         documents.append(document)
 
