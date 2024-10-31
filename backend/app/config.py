@@ -41,6 +41,8 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY_SA")
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/devstorage.read_write",
+    "https://www.googleapis.com/auth/devstorage.full_control",
 ]
 SERVICE_ACCOUNT_FILE_PATH = os.environ.get(
     "SERVICE_ACCOUNT_FILE_PATH",
