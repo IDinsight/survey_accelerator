@@ -1,6 +1,6 @@
 # routers.py
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 
 from app.auth.dependencies import authenticate_key
 from app.ingestion.schemas import AirtableIngestionResponse
@@ -33,7 +33,23 @@ async def ingest_airtable(
     Ingest documents from Airtable records with page-level progress logging.
     Accepts a list of document IDs to process.
     """
-    records = get_airtable_records()
+    try:
+        records = get_airtable_records()
+
+    except KeyError as e:
+        logger.error(f"Airtable configuration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Airtable configuration error.",
+        ) from e
+
+    except Exception as e:
+        logger.error(f"Error fetching records from Airtable: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching records from Airtable: {e}",
+        ) from e
+
     if not records:
         return AirtableIngestionResponse(
             total_records_processed=0,
@@ -67,7 +83,21 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     Refresh the list of documents by comparing Airtable 'ID' fields with database
     'document_id's. Automatically ingest the missing documents.
     """
-    records = get_airtable_records()
+    try:
+        records = get_airtable_records()
+    except KeyError as e:
+        logger.error(f"Airtable configuration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Airtable configuration error.",
+        ) from e
+    except Exception as e:
+        logger.error(f"Error fetching records from Airtable: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching records from Airtable: {e}",
+        ) from e
+
     if not records:
         return AirtableIngestionResponse(
             total_records_processed=0,

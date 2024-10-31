@@ -19,29 +19,24 @@ if not AIRTABLE_API_KEY:
 
 def get_airtable_records() -> list:
     """
-    Fetch records from Airtable and return a dictionary of metadata keyed by file name.
+    Fetch records from Airtable and return a list of records.
+    Raises exceptions if there are issues fetching the records.
     """
-    try:
-        airtable_config: Dict[str, str] = AIRTABLE_CONFIGS.get("default", {})
-        if not airtable_config:
-            logger.error("Airtable configuration 'default' not found.")
-            raise KeyError("Airtable configuration 'default' not found.")
+    airtable_config: Dict[str, str] = AIRTABLE_CONFIGS.get("default", {})
+    if not airtable_config:
+        logger.error("Airtable configuration 'default' not found.")
+        raise KeyError("Airtable configuration 'default' not found.")
 
-        base_id = airtable_config.get("AIRTABLE_BASE_ID")
-        table_name = airtable_config.get("TABLE_NAME")
-        if not base_id or not table_name:
-            logger.error("Airtable base ID or table name not found in configuration.")
-            raise KeyError("Airtable base ID or table name not found in configuration.")
+    base_id = airtable_config.get("AIRTABLE_BASE_ID")
+    table_name = airtable_config.get("TABLE_NAME")
+    if not base_id or not table_name:
+        logger.error("Airtable base ID or table name not found in configuration.")
+        raise KeyError("Airtable base ID or table name not found in configuration.")
 
-        api = Api(AIRTABLE_API_KEY)
-        table = api.table(base_id, table_name)
-        records = table.all()
-        print(records)
-        return records
-
-    except Exception as e:
-        logger.error(f"Error fetching records from Airtable: {e}")
-        return []
+    api = Api(AIRTABLE_API_KEY)
+    table = api.table(base_id, table_name)
+    records = table.all()
+    return records
 
 
 async def get_missing_document_ids(records: list[Dict[str, Any]]) -> list[int]:
