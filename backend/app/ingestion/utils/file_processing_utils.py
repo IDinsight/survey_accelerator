@@ -1,9 +1,8 @@
 # utils/file_processing_utils.py
 
 import asyncio
-from typing import Any, BinaryIO, Dict, Optional
+from typing import Any, BinaryIO, Dict
 
-import pandas as pd
 import PyPDF2
 import tiktoken
 import tqdm
@@ -55,6 +54,7 @@ async def process_file(
     file_type: str,
     progress_bar: tqdm.tqdm,
     progress_lock: asyncio.Lock,
+    metadata: Dict[str, Any],  # Pass metadata here
 ) -> list[Dict[str, Any]]:
     """
     Process the file by parsing, generating summaries, and creating embeddings.
@@ -107,6 +107,10 @@ async def process_file(
         encoding.encode(prompt_template.format(document_content="", chunk_content=""))
     )
 
+    # Create metadata string
+    metadata_string = create_metadata_string(metadata)
+    metadata_section = f"Information about this document:\n{metadata_string}\n\n"
+
     processed_pages: list[Dict[str, Any]] = []
 
     for page_num, page_text in enumerate(chunks):
@@ -135,19 +139,19 @@ async def process_file(
             truncated_document_content = document_content
 
         # Generate contextual summary asynchronously
-        context = await asyncio.to_thread(
+        chunk_summary = await asyncio.to_thread(
             generate_contextual_summary, truncated_document_content, page_text
         )
 
-        if not context:
+        if not chunk_summary:
             logger.warning(
                 f"""Contextual summary generation failed for page {page_num + 1}
                 in file '{file_name}'. Skipping."""
             )
             continue
 
-        # Combine context with chunk text
-        contextualized_chunk = f"{context}\n\n{page_text}"
+        # Combine metadata, context summary, and chunk text
+        contextualized_chunk = f"{metadata_section}{chunk_summary}\n\n{page_text}"
 
         # Create embedding asynchronously
         embedding = await asyncio.to_thread(create_embedding, contextualized_chunk)
@@ -158,13 +162,21 @@ async def process_file(
                 file '{file_name}'. Skipping."""
             )
             continue
+
         # Extract questions and answers
         extracted_question_answers = extract_question_answer_from_page(page_text)
+        if not isinstance(extracted_question_answers, list):
+            logger.error(
+                f"""Extracted QA pairs on page {page_num + 1} is not a list.
+                Skipping QA pairs for this page."""
+            )
+            extracted_question_answers = []
 
         processed_pages.append(
             {
                 "page_number": page_num + 1,
                 "contextualized_chunk": contextualized_chunk,
+                "chunk_summary": chunk_summary,
                 "embedding": embedding,
                 "extracted_question_answers": extracted_question_answers,
             }
@@ -175,18 +187,6 @@ async def process_file(
             progress_bar.update(1)
 
     return processed_pages
-
-
-def open_sheet_in_pandas(file_path: str) -> Optional[pd.DataFrame]:
-    """
-    Open an Excel file in pandas and return the DataFrame.
-    """
-    try:
-        df = pd.read_excel(file_path)
-        return df
-    except Exception as e:
-        logger.error(f"Error opening Excel file: {e}")
-        return None
 
 
 def create_metadata_string(metadata: Dict[str, Any]) -> str:

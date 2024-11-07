@@ -3,7 +3,9 @@
 import io
 
 from google.cloud import storage
+from google.oauth2 import service_account
 
+from app.config import SERVICE_ACCOUNT_FILE_PATH
 from app.utils import setup_logger
 
 logger = setup_logger()
@@ -25,8 +27,13 @@ def upload_file_buffer_to_gcp_bucket(
         Public URL of the uploaded file.
     """
     try:
-        # Initialize a client
-        storage_client = storage.Client()
+        # Load service account credentials
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE_PATH
+        )
+
+        # Initialize the storage client with credentials
+        storage_client = storage.Client(credentials=creds)
 
         # Get the bucket
         bucket = storage_client.bucket(bucket_name)

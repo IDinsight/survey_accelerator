@@ -8,14 +8,15 @@ from app.utils import setup_logger
 
 logger = setup_logger()
 
-# Instantiate the OpenAI client
+# Instantiate the OpenAI client (you can keep this or comment it out)
 client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def generate_contextual_summary(document_content: str, chunk_content: str) -> str:
     """
-    Generate a concise contextual summary for a chunk using OpenAI's GPT-4.
+    Generate a concise contextual summary for a chunk.
     """
+    # Construct the prompt (optional, you can comment this out if not needed)
     prompt = f"""
     <document>
     {document_content}
@@ -27,21 +28,28 @@ def generate_contextual_summary(document_content: str, chunk_content: str) -> st
     </chunk>
 
     Please give a short succinct context to situate this chunk within the overall
-    document     which is a survey questionnaire for the purposes of improving search
+    document which is a survey questionnaire for the purposes of improving search
     retrieval of the chunk.
     Answer only with the succinct context and nothing else.
     """
-
+    prompt += "\n"
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=150,
-            temperature=0,
+        # Comment out the OpenAI API call
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=150,
+        #     temperature=0,
+        # )
+        # summary = response.choices[0].message.content.strip()
+
+        # Return a dummy summary
+        summary = (
+            "This chunk contains questions about contraception awareness and attitudes."
         )
-        summary = response.choices[0].message.content.strip()
+
         return summary
     except Exception as e:
         logger.error(f"Unexpected error generating contextual summary: {e}")
@@ -52,20 +60,27 @@ def generate_brief_summary(document_content: str) -> str:
     """
     Generate a concise summary of the entire document in 10-15 words.
     """
+    # Construct the prompt (optional)
     prompt = (
         f"Summarize the following document in 10 to 15 words:\n\n{document_content}"
     )
+    prompt += "\n"
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=20,
-            temperature=0.5,
-        )
-        summary = response.choices[0].message.content.strip()
+        # Comment out the OpenAI API call
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=20,
+        #     temperature=0.5,
+        # )
+        # summary = response.choices[0].message.content.strip()
+
+        # Return a dummy brief summary
+        summary = "Survey questionnaire focusing on men's reproductive health."
+
         return summary
     except Exception as e:
         logger.error(f"Error generating brief summary: {e}")
@@ -83,6 +98,7 @@ def generate_smart_filename(file_name: str, document_content: str) -> str:
     Returns:
         An elegant filename as a string.
     """
+    # Construct the prompt (optional)
     prompt = f"""
     Given the original file name "{file_name}" and the first few
     pages of content below, generate an elegant
@@ -95,27 +111,33 @@ def generate_smart_filename(file_name: str, document_content: str) -> str:
 
     Filename:
     """
-
+    prompt += "\n"
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=10,
-            temperature=0.5,
-        )
-        smart_name = response.choices[0].message.content.strip()
+        # Comment out the OpenAI API call
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=10,
+        #     temperature=0.5,
+        # )
+        # smart_name = response.choices[0].message.content.strip()
+
+        # Return a dummy filename
+        smart_name = "Men's Health Survey Questionnaire"
+
         return smart_name
     except Exception as e:
         logger.error(f"Error generating elegant filename: {e}")
         return ""
 
 
-def extract_question_answer_from_page(chunk_content: str) -> str:
+def extract_question_answer_from_page(chunk_content: str) -> list[dict]:
     """
-    Extract questions and answers from a chunk of text using OpenAI's GPT-4.
+    Extract questions and answers from a chunk of text.
     """
+    # Construct the prompt (optional)
     prompt = f"""
     <chunk>
     {chunk_content}
@@ -125,30 +147,58 @@ def extract_question_answer_from_page(chunk_content: str) -> str:
     questionnaire instrument. The survey may be messy but take time to reason through
     your response.
 
-    THE OUTPUT FORMAT MUST BE IN THE FORM OF A LIST OF DICTIONARIES
+    THE OUTPUT FORMAT MUST BE IN THE FORM OF A **VALID JSON LIST OF DICTIONARIES**
     STRUCTURED AS FOLLOWS:
     [
         {{"question": "Do you have a car?", "answers": ["Yes", "No"]}},
         {{"question": "How many times do you eat out?", "answers": ["Once a week",
         "Twice a week", "Never"]}}
+    ]
 
-    IF NO QUESTIONS OR ANSWERS ARE FOUND, LEAVE THE LIST EMPTY.
-    RETURN ONLY THE LIST OF DICTIONARIES. DO NOT INCLUDE ANY OTHER TEXT IN YOUR ANSWER.
+    IF NO QUESTIONS OR ANSWERS ARE FOUND, RETURN AN EMPTY LIST: []
+
+    RETURN ONLY THE JSON LIST. DO NOT INCLUDE ANY OTHER TEXT IN YOUR ANSWER.
 
     Your answer:
     """
+    prompt += "\n"
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=150,
-            temperature=0,
-        )
-        qa_pairs = response.choices[0].message.content.strip()
+        # Comment out the OpenAI API call
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=1000,  # Increase to ensure full responses
+        #     temperature=0,
+        # )
+        # qa_pairs_str = response.choices[0].message.content.strip()
+
+        # Return dummy QA pairs
+        qa_pairs = [
+            {
+                "question": "Have you heard about family planning on the radio?",
+                "answers": ["Yes", "No"],
+            },
+            {
+                "question": "Do you agree  contraception is a woman's concern a man?",
+                "answers": ["Agree", "Disagree", "Don't know"],
+            },
+            {
+                "question": "Do you watch television at least once a or not at all?",
+                "answers": [
+                    "At least once a week",
+                    "Less than once a week",
+                    "Not at all",
+                ],
+            },
+        ]
+
+        # If you want to test with an empty list, you can uncomment the line below
+        # qa_pairs = []
+
         return qa_pairs
     except Exception as e:
         logger.error(f"Error extracting questions and answers: {e}")
-        return ""
+        return []

@@ -34,15 +34,6 @@ async def process_record(
 ) -> Tuple[int, int]:
     """
     Process a single record from Airtable.
-
-    Args:
-        record (Dict[str, Any]): The record to process.
-        progress_bar (tqdm.tqdm): The tqdm progress bar instance.
-        progress_lock (asyncio.Lock): An asyncio.Lock to synchronize progress
-        bar updates.
-
-    Returns:
-        Tuple[int, int]: Number of records processed and chunks created.
     """
     fields = record.get("fields", {})
     file_name = fields.get("File name")
@@ -99,7 +90,12 @@ async def process_record(
 
     # Process the file asynchronously
     processed_pages = await process_file(
-        processing_file_buffer, file_name, file_type, progress_bar, progress_lock
+        processing_file_buffer,
+        file_name,
+        file_type,
+        progress_bar,
+        progress_lock,
+        metadata=fields,
     )
 
     if not processed_pages:
