@@ -23,7 +23,8 @@ TAG_METADATA = {
 
 @router.post("/", response_model=SearchResponse)
 async def search_documents(
-    request: SearchRequest, session: AsyncSession = Depends(get_async_session)
+    request: SearchRequest,
+    session: AsyncSession = Depends(get_async_session),
 ) -> SearchResponse:
     """Router for searching documents based on a query."""
     try:
@@ -32,7 +33,9 @@ async def search_documents(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
             )
 
-        results = await hybrid_search(session, request.query, request.top_k)
+        results = await hybrid_search(
+            session, request.query, request.top_k, request.precision
+        )
 
         if not results:
             return SearchResponse(
@@ -44,9 +47,6 @@ async def search_documents(
             results=results,
             message="Search completed successfully.",
         )
-    except HTTPException as he:
-        raise he  # Optionally, you might remove this block (see below)
+
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        ) from e
+        raise e

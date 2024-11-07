@@ -1,60 +1,64 @@
-# app/search/schemas.py
+"""Schema definitions for the search API."""
 
-from datetime import datetime
-from typing import Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class SearchRequest(BaseModel):
-    """Schema for the search request."""
+    """Schema for the search request parameters."""
 
     query: str
-    top_k: Optional[int] = 10
-
-
-class SearchResult(BaseModel):
-    """Schema for a single search result."""
-
-    id: int
-    content_text: str
-    score: float
+    top_k: int = 10
+    precision: bool = False  # Add the precision parameter
 
 
 class DocumentMetadata(BaseModel):
-    """Schema for the metadata of a document.
-    Can be pulled from ORM as per model_config"""
+    """Metadata for a document."""
 
     id: int
     file_id: str
     file_name: str
+    title: Optional[str]
+    summary: Optional[str]
+    pdf_url: Optional[str]
+
+    class Config:
+        """Pydantic configuration options."""
+
+        orm_mode = True
+        from_attributes = True
+
+
+class MatchedChunk(BaseModel):
+    """Schema representing a matched chunk in a document."""
+
     page_number: int
-    created_datetime_utc: datetime
-    updated_datetime_utc: datetime
-    countries: Optional[list[str]] = None
-    organizations: Optional[list[str]] = None
-    regions: Optional[list[str]] = None
-    notes: Optional[str] = None
-    drive_link: Optional[str] = None
-    year: Optional[int] = None
-    date_added: Optional[datetime] = None
-    document_id: Optional[int] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class RerankedDocument(BaseModel):
-    """Schema for a document that has been reranked."""
-
-    metadata: DocumentMetadata
-    content_text: str
+    contextualized_chunk: str
     relevance_score: float
     rank: int
 
 
+class MatchedQAPair(BaseModel):
+    """Schema representing a matched question-answer pair."""
+
+    page_number: int
+    question: str
+    answer: str
+    relevance_score: float
+    rank: int
+
+
+class DocumentSearchResult(BaseModel):
+    """Schema for search results grouped by document."""
+
+    metadata: DocumentMetadata
+    matches: List[Any]  # Will contain either MatchedChunk or MatchedQAPair
+
+
 class SearchResponse(BaseModel):
-    """Final schema for the search response."""
+    """Schema for the search response."""
 
     query: str
-    results: list[RerankedDocument]
-    message: Optional[str] = "Search completed successfully."
+    results: List[DocumentSearchResult]
+    message: Optional[str] = None
