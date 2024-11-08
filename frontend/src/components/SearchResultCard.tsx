@@ -9,7 +9,7 @@ interface SearchResultCardProps {
 }
 
 const SearchResultCard: FC<SearchResultCardProps> = ({ result, onClick, isSelected, precisionSearch }) => {
-  const matchType = precisionSearch ? 'QA Matches' : 'Page Matches';
+  const matchType = precisionSearch ? 'Matches' : 'Matches';
 
   return (
     <div

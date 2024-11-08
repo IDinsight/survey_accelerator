@@ -1,12 +1,15 @@
-// src/components/MatchesList.tsx
-
 import React from 'react';
-import { MatchedQAPair } from '../interfaces';
+import { MatchedChunk, MatchedQAPair } from '../interfaces';
 
 interface MatchesListProps {
-  matches: MatchedQAPair[]; // Assuming all matches have 'question' and 'answer'
+  matches: (MatchedChunk | MatchedQAPair)[];
   onMatchClick: (pageNumber: number) => void;
 }
+
+// Type guard to check if a match is of type MatchedChunk
+const isMatchedChunk = (match: MatchedChunk | MatchedQAPair): match is MatchedChunk => {
+  return (match as MatchedChunk).explanation !== undefined;
+};
 
 const MatchesList: React.FC<MatchesListProps> = ({
   matches,
@@ -30,7 +33,15 @@ const MatchesList: React.FC<MatchesListProps> = ({
               <strong>
                 Rank {match.rank}, Page {match.page_number}:
               </strong>{' '}
-              {match.question}
+              {/* Use type guard to check if match is MatchedChunk */}
+              {isMatchedChunk(match) ? (
+                <p>{match.explanation}</p>
+              ) : (
+                <>
+                  <p><strong>Question:</strong> {match.question}</p>
+                  <p><strong>Answer:</strong> {match.answer}</p>
+                </>
+              )}
             </button>
           </li>
         ))}
