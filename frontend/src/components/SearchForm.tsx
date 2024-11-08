@@ -6,9 +6,9 @@ interface SearchFormProps {
   onPrecisionToggle: () => void;
 }
 
-const regions = ['North America', 'Europe', 'Asia', 'Africa', 'South America', 'Oceania'];
-const countries = ['USA', 'Canada', 'UK', 'Germany', 'France', 'Japan'];
-const organizations = ['UN', 'WHO', 'UNESCO', 'UNICEF', 'World Bank'];
+const regions = ["Africa", "Global"];
+const countries = ["Ethiopia", "Global", "Nigeria", "Tanzania", "Uganda"];
+const organizations = ["UNICEF", "USAID", "World Bank"];
 
 const SearchForm: FC<SearchFormProps> = ({ onSubmit, precisionSearch, onPrecisionToggle }) => {
   return (

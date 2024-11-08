@@ -1,9 +1,12 @@
+// src/AdvancedSearchEngine.tsx
+
 import React, { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import SearchResultCard from './components/SearchResultCard';
 import PDFViewer from './components/PDFViewer';
+import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
-import { DocumentSearchResult, MatchedChunk, MatchedQAPair } from './interfaces';
+import { DocumentSearchResult } from './interfaces';
 
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
@@ -67,7 +70,6 @@ const AdvancedSearchEngine: React.FC = () => {
         style={{
           width: '28%',
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
-          padding: '20px',
         }}
       >
         {/* Search Form */}
@@ -113,56 +115,24 @@ const AdvancedSearchEngine: React.FC = () => {
       </div>
 
       {/* Right Side - PDF Viewer and Matches */}
-      <div
-        className="p-6 border-l border-gray-300 flex flex-col justify-between"
-        style={{ width: '72%' }}
-      >
-        <PDFViewer pdfUrl={selectedPDF || ''} pageNumber={currentPageNumber || undefined} />
+      <div className="flex flex-col flex-grow h-full">
+        {/* PDF Viewer */}
+        <div className="flex-grow min-h-0">
+          <PDFViewer pdfUrl={selectedPDF || ''} pageNumber={currentPageNumber || undefined} />
+        </div>
 
+        {/* Selected Result Display */}
         {selectedCardId && (() => {
-          const selectedResult = searchResults.find((res) => res.metadata.id === selectedCardId);
-          const matches = selectedResult?.matches ?? [];
+          const selectedResult = searchResults.find(
+            (res) => res.metadata.id === selectedCardId
+          );
 
-          if (precisionSearch) {
-            // QA Search Mode
-            return (
-              <div className="mt-4 p-4 bg-white rounded-lg shadow">
-                <h4 className="text-lg font-semibold">QA Matches for Selected Result:</h4>
-                <ul className="space-y-2 mt-2">
-                  {matches
-                    .filter((match): match is MatchedQAPair => 'question' in match)
-                    .map((match: MatchedQAPair, index: number) => (
-                      <li key={index} className="text-sm">
-                        <strong>Rank {match.rank}:</strong> {match.question}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            );
-          } else {
-            // Regular Search Mode
-            return (
-              <div className="mt-4 p-4 bg-white rounded-lg shadow">
-                <h4 className="text-lg font-semibold">Matches for Selected Result:</h4>
-                <ul className="space-y-2 mt-2">
-                  {matches
-                    .filter((match): match is MatchedChunk => 'explanation' in match)
-                    .map((match: MatchedChunk, index: number) => (
-                      <li
-                        key={index}
-                        className="text-sm cursor-pointer"
-                        onClick={() => handleMatchClick(match.page_number)}
-                      >
-                        <strong>
-                          Rank {match.rank}, Page {match.page_number}:
-                        </strong>{' '}
-                        {match.explanation}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            );
-          }
+          return selectedResult ? (
+            <SelectedResultDisplay
+              selectedResult={selectedResult}
+              onMatchClick={handleMatchClick}
+            />
+          ) : null;
         })()}
       </div>
     </div>
