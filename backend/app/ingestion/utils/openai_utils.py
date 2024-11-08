@@ -1,5 +1,6 @@
-# utils/openai_utils.py
+# utils / openai_utils.py
 
+import json
 import os
 
 import openai
@@ -18,20 +19,23 @@ def generate_contextual_summary(document_content: str, chunk_content: str) -> st
     """
     # Construct the prompt (optional, you can comment this out if not needed)
     prompt = f"""
-    <document>
-    {document_content}
-    </document>
+        <document>
+        {document_content}
+        </document>
 
-    Here is the chunk we want to situate within the whole document
-    <chunk>
-    {chunk_content}
-    </chunk>
+        Here is a specific page from the document:
+        <chunk>
+        {chunk_content}
+        </chunk>
 
-    Please give a short succinct context to situate this chunk within the overall
-    document which is a survey questionnaire for the purposes of improving search
-    retrieval of the chunk.
-    Answer only with the succinct context and nothing else.
-    """
+        Please provide a concise, contextually accurate summary for the above page based
+        strictly on its visible content.
+        DO NOT include generic survey topics (e.g., contraception) unless clearly
+        mentioned on the page.
+        This is to improve precise search relevance and must reflect what is
+        explicitly covered on this page AND HOW IT SITUATES WITHIN THE LARGER DOCUMENT.
+        Answer only with the context, avoiding any inferred topics.
+        """
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -42,11 +46,9 @@ def generate_contextual_summary(document_content: str, chunk_content: str) -> st
             temperature=0,
         )
         summary = response.choices[0].message.content.strip()
-        summary = (
-            "This chunk contains questions about contraception awareness and attitudes."
-        )
 
         return summary
+
     except Exception as e:
         logger.error(f"Unexpected error generating contextual summary: {e}")
         return ""
@@ -57,9 +59,14 @@ def generate_brief_summary(document_content: str) -> str:
     Generate a concise summary of the entire document in 10-15 words.
     """
     # Construct the prompt (optional)
-    prompt = (
-        f"Summarize the following document in 10 to 15 words:\n\n{document_content}"
-    )
+    prompt = f"""Summarize the following document in 10 to 15 in a sentence that
+        starts with the word 'Covers'
+        e.g. 'Covers womens health and contraception awareness.' or
+        'Covers the impact of climate change on agriculture.'
+        Respond only with the summary and nothing else.
+        ENSURE YOUR ANSWER NEVER EXCEEDS 15 WORDS.
+        Below is the content to summarize:
+        \n\n{document_content}"""
 
     try:
         response = client.chat.completions.create(
@@ -68,12 +75,9 @@ def generate_brief_summary(document_content: str) -> str:
                 {"role": "user", "content": prompt},
             ],
             max_tokens=20,
-            temperature=0.5,
+            temperature=0.2,
         )
         summary = response.choices[0].message.content.strip()
-
-        summary = "Survey questionnaire focusing on men's reproductive health."
-
         return summary
     except Exception as e:
         logger.error(f"Error generating brief summary: {e}")
@@ -82,28 +86,37 @@ def generate_brief_summary(document_content: str) -> str:
 
 def generate_smart_filename(file_name: str, document_content: str) -> str:
     """
-    Generate an elegant filename devoid of year numbers.
+    Generate a specific and elegant filename devoid of year numbers.
 
     Args:
         file_name: Original file name.
         document_content: Content of the document.
 
     Returns:
-        An elegant filename as a string.
+        A descriptive filename as a plain text string.
     """
-    # Construct the prompt (optional)
+    # Construct the prompt with precise instructions
     prompt = f"""
-    Given the original file name "{file_name}" and the first few
-    pages of content below, generate an elegant
-    and descriptive filename without any year numbers.
+    Given the original file name "{file_name}" and the content excerpt below, generate
+    a specific and descriptive filename that includes relevant information, such as the
+    organization name (e.g., 'USAID', 'UNICEF') and the main topic of the document.
 
-    Do not include any dates in the filename.
+    The filename should:
+    - Avoid any dates or year numbers
+    - Exclude prefixes like 'Filename:', asterisks, or other symbols
+    - Be concise, specific, and relevant to the document content
+
+    Examples of appropriate filenames might include:
+    - 'USAID Family Health Survey'
+    - 'UNICEF Maternal Health Questionnaire'
+    - 'DHS Reproductive Health Analysis'
 
     Content excerpt:
     {document_content[:2000]}
 
-    Filename:
+    Plain text filename:
     """
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -111,9 +124,14 @@ def generate_smart_filename(file_name: str, document_content: str) -> str:
                 {"role": "user", "content": prompt},
             ],
             max_tokens=10,
-            temperature=0.5,
+            temperature=0.2,
         )
         smart_name = response.choices[0].message.content.strip()
+
+        # Optional: Ensure there's no unexpected text or symbols
+        smart_name = smart_name.split(":", 1)[
+            -1
+        ].strip()  # Remove anything before a colon
 
         return smart_name
     except Exception as e:
@@ -125,29 +143,26 @@ def extract_question_answer_from_page(chunk_content: str) -> list[dict]:
     """
     Extract questions and answers from a chunk of text.
     """
-    # Construct the prompt (optional)
     prompt = f"""
-    <chunk>
-    {chunk_content}
-    </chunk>
+    You are to extract questions and their possible answers from the following survey
+    questionnaire chunk. The survey may be messy, but take time to reason through your
+    response.
 
-    Extract questions and answering options from the chunk above of a survey
-    questionnaire instrument. The survey may be messy but take time to reason through
-    your response.
-
-    THE OUTPUT FORMAT MUST BE IN THE FORM OF A **VALID JSON LIST OF DICTIONARIES**
-    STRUCTURED AS FOLLOWS:
+    **Provide the output as a JSON list of dictionaries in the following format without
+    any code block or markdown formatting**:
     [
-        {{"question": "Do you have a car?", "answers": ["Yes", "No"]}},
-        {{"question": "How many times do you eat out?", "answers": ["Once a week",
-        "Twice a week", "Never"]}}
+        {{"question": "Question text", "answers": ["Answer 1", "Answer 2"]}},
+        ...
     ]
 
-    IF NO QUESTIONS OR ANSWERS ARE FOUND, RETURN AN EMPTY LIST: []
+    **Do not include any additional text outside the JSON array. Do not include any code
+    block notation, such as triple backticks or language identifiers like
+json.**
 
-    RETURN ONLY THE JSON LIST. DO NOT INCLUDE ANY OTHER TEXT IN YOUR ANSWER.
+    If no questions or answers are found, return an empty list: []
 
-    Your answer:
+    Chunk:
+    {chunk_content}
     """
 
     try:
@@ -160,8 +175,12 @@ def extract_question_answer_from_page(chunk_content: str) -> list[dict]:
             temperature=0,
         )
         qa_pairs_str = response.choices[0].message.content.strip()
-
-        return qa_pairs_str
+        qa_pairs = json.loads(qa_pairs_str)
+        return qa_pairs
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error: {e}")
+        logger.error(f"Response was: {qa_pairs_str}")
+        return []
     except Exception as e:
         logger.error(f"Error extracting questions and answers: {e}")
         return []

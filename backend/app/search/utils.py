@@ -19,8 +19,8 @@ from app.utils import setup_logger
 
 logger = setup_logger()
 
-INITIAL_TOP_K = 50  # Higher initial value to account for potential merges
-FINAL_TOP_RESULTS = 30  # Final results desired
+INITIAL_TOP_K = 40  # Higher initial value to account for potential merges
+FINAL_TOP_RESULTS = 25  # Final results desired
 
 # Initialize Cohere client
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")

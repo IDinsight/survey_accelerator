@@ -174,7 +174,7 @@ async def ingest_records(records: list[Dict[str, Any]]) -> AirtableIngestionResp
     progress_bar = tqdm.tqdm(desc="Processing pages", unit="page", total=0)
 
     # Limit the number of concurrent tasks to prevent resource exhaustion
-    semaphore = asyncio.Semaphore(10)  # Adjust the number as needed
+    semaphore = asyncio.Semaphore(2)  # Adjust the number as needed
 
     async def process_with_semaphore(record: Dict[str, Any]) -> Tuple[int, int]:
         """Semaphore-protected function to process a record."""

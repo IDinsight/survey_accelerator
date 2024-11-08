@@ -1,6 +1,7 @@
 # utils/embedding_utils.py
 
 import cohere
+
 from app.config import COHERE_API_KEY
 from app.utils import setup_logger
 
@@ -11,7 +12,7 @@ cohere_client = cohere.Client(COHERE_API_KEY)
 model = "embed-english-v3.0"
 
 
-def create_embedding(text):
+def create_embedding(text: str) -> list:
     """
     Create an embedding for the given text using Cohere.
     """
@@ -27,4 +28,4 @@ def create_embedding(text):
         return embedding[0]
     except Exception as e:
         logger.error(f"Error generating embedding: {e}")
-        return None
+        raise e
