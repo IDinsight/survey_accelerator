@@ -4,6 +4,7 @@ import json
 import os
 
 import openai
+from openai import AsyncOpenAI
 
 from app.utils import setup_logger
 
@@ -11,6 +12,7 @@ logger = setup_logger()
 
 # Instantiate the OpenAI client (you can keep this or comment it out)
 client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
+async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def generate_contextual_summary(document_content: str, chunk_content: str) -> str:
@@ -186,7 +188,7 @@ json.**
         return []
 
 
-def generate_query_match_explanation(query: str, chunk_content: str) -> str:
+async def generate_query_match_explanation(query: str, chunk_content: str) -> str:
     """
     Generate a short explanation of how the query matches the contextualized chunk.
     """
@@ -207,7 +209,7 @@ def generate_query_match_explanation(query: str, chunk_content: str) -> str:
     """
 
     try:
-        response = client.chat.completions.create(
+        response = await async_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "user", "content": prompt},
@@ -216,7 +218,6 @@ def generate_query_match_explanation(query: str, chunk_content: str) -> str:
             temperature=0,
         )
         explanation = response.choices[0].message.content.strip()
-
         return explanation
     except Exception as e:
         logger.error(f"Error generating match explanation: {e}")

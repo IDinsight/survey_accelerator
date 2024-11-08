@@ -196,7 +196,6 @@ async def hybrid_search(
                             "doc": doc,
                             "qa_pair": qa_pair,
                             "page_number": doc.page_number,
-                            # Removed 'initial_score'
                         }
                     )
         else:
@@ -208,7 +207,6 @@ async def hybrid_search(
                     {
                         "doc": doc,
                         "page_number": doc.page_number,
-                        # Removed 'initial_score'
                     }
                 )
 
@@ -252,9 +250,21 @@ async def hybrid_search(
         # Take top matches
         top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-        # Group matches by document_id
+        # Explanation generation only if precision is disabled (non-precision search)
+        if not precision:
+            explanation_tasks = [
+                generate_query_match_explanation(
+                    query_str, match["doc"].contextualized_chunk
+                )
+                for match in top_matches
+            ]
+            explanations = await asyncio.gather(*explanation_tasks)
+        else:
+            explanations = [None] * len(top_matches)  # Placeholder if in precision mode
+
+        # Group matches by document_id and build final results
         documents = {}
-        for match in top_matches:
+        for i, match in enumerate(top_matches):
             doc = match["doc"]
             document_id = doc.document_id
             if document_id not in documents:
@@ -263,65 +273,36 @@ async def hybrid_search(
                     "matches": [],
                     "best_rank": match["rank"],
                 }
-            documents[document_id]["matches"].append(match)
+            explanation = explanations[i] if not precision else None
+            if precision:
+                matched_qas = MatchedQAPair(
+                    page_number=match["page_number"],
+                    question=match["qa_pair"].question,
+                    answer=match["qa_pair"].answer,
+                    rank=match["rank"],
+                )
+                documents[document_id]["matches"].append(matched_qas)
+            else:
+                matched_chunk = MatchedChunk(
+                    page_number=match["page_number"],
+                    rank=match["rank"],
+                    explanation=explanation,
+                )
+                documents[document_id]["matches"].append(matched_chunk)
+
             if match["rank"] < documents[document_id]["best_rank"]:
                 documents[document_id]["best_rank"] = match["rank"]
 
-        # Sort documents by best_rank
+        # Sort documents by best_rank and create final search results
         sorted_documents = sorted(documents.values(), key=lambda x: x["best_rank"])
-
-        # Build final results
-        final_results = []
-        for doc_entry in sorted_documents:
-            doc = doc_entry["doc"]
-            matches = doc_entry["matches"]
-            if precision:
-                matched_qas = [
-                    MatchedQAPair(
-                        page_number=match["page_number"],
-                        question=match["qa_pair"].question,
-                        answer=match["qa_pair"].answer,
-                        rank=match["rank"],
-                    )
-                    for match in matches
-                ]
-                num_matches = len(matched_qas)
-                final_results.append(
-                    DocumentSearchResult(
-                        metadata=create_metadata(doc),
-                        matches=matched_qas,
-                        num_matches=num_matches,
-                    )
-                )
-            else:
-                # Generate explanations
-                explanations_tasks = [
-                    asyncio.to_thread(
-                        generate_query_match_explanation,
-                        query_str,
-                        doc.contextualized_chunk,
-                    )
-                    for match in matches
-                ]
-                explanations = await asyncio.gather(*explanations_tasks)
-
-                matched_chunks = [
-                    MatchedChunk(
-                        page_number=match["page_number"],
-                        rank=match["rank"],
-                        explanation=explanations[i],
-                    )
-                    for i, match in enumerate(matches)
-                ]
-                num_matches = len(matched_chunks)
-
-                final_results.append(
-                    DocumentSearchResult(
-                        metadata=create_metadata(doc),
-                        matches=matched_chunks,
-                        num_matches=num_matches,
-                    )
-                )
+        final_results = [
+            DocumentSearchResult(
+                metadata=create_metadata(doc_entry["doc"]),
+                matches=doc_entry["matches"],
+                num_matches=len(doc_entry["matches"]),
+            )
+            for doc_entry in sorted_documents
+        ]
 
         return final_results
 
