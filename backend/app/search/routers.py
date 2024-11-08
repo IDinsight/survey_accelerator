@@ -1,6 +1,3 @@
-# app/search/routers.py
-
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,15 +23,21 @@ async def search_documents(
     request: SearchRequest,
     session: AsyncSession = Depends(get_async_session),
 ) -> SearchResponse:
-    """Router for searching documents based on a query."""
+    """Search for documents based on the provided query."""
     try:
         if not request.query.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
             )
 
+        # Perform search without passing `top_k`, as it’s managed internally
         results = await hybrid_search(
-            session, request.query, request.top_k, request.precision
+            session,
+            query_str=request.query,
+            precision=request.precision,
+            country=request.country,
+            organization=request.organization,
+            region=request.region,
         )
 
         if not results:
@@ -49,4 +52,5 @@ async def search_documents(
         )
 
     except Exception as e:
+        # Log or raise the exception as needed
         raise e

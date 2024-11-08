@@ -202,3 +202,40 @@ def extract_question_answer_from_page(chunk_content: str) -> list[dict]:
     except Exception as e:
         logger.error(f"Error extracting questions and answers: {e}")
         return []
+
+
+def generate_query_match_explanation(query: str, chunk_content: str) -> str:
+    """
+    Generate a short explanation of how the query matches the contextualized chunk.
+    """
+    prompt = f"""
+    Given the following query:
+    "{query}"
+
+    And the following chunk from a document:
+    "{chunk_content}"
+
+    Provide a one-sentence explanation starting with "Mentions ..." to explain why the
+    chunk matches the query.
+    """
+    prompt += "\n"
+
+    try:
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=1000,  # Increase to ensure full responses
+        #     temperature=0,
+        # )
+        # qa_pairs_str = response.choices[0].message.content.strip()
+
+        # Dummy explanation for testing
+        explanation = f"""Mentions how '{query}' relates to contraception and family
+        planning."""
+
+        return explanation
+    except Exception as e:
+        logger.error(f"Error generating match explanation: {e}")
+        return "Unable to generate explanation."

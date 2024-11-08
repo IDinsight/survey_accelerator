@@ -1,5 +1,3 @@
-# utils/gcp_storage_utils.py
-
 import io
 
 from google.cloud import storage
@@ -16,7 +14,7 @@ def upload_file_buffer_to_gcp_bucket(
 ) -> str:
     """
     Uploads a file from an in-memory file buffer to the GCP bucket and returns
-    the public URL.
+    the public URL with inline Content-Disposition.
 
     Args:
         file_buffer: In-memory file-like object (io.BytesIO).
@@ -41,8 +39,15 @@ def upload_file_buffer_to_gcp_bucket(
         # Create a blob object
         blob = bucket.blob(destination_blob_name)
 
+        # Set metadata for inline viewing
+        blob.content_disposition = "inline"
+        blob.content_type = "application/pdf"
+
         # Upload the file to GCP bucket
         blob.upload_from_file(file_buffer, rewind=True)
+
+        # Apply metadata update
+        blob.patch()
 
         # Get the public URL
         public_url = blob.public_url

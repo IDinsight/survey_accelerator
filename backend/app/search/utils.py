@@ -1,14 +1,14 @@
-# app/search/utils.py
-
+import asyncio
 import os
-from collections import OrderedDict
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import cohere
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.models import DocumentDB
+from app.ingestion.utils.openai_utils import generate_query_match_explanation
 from app.search.schemas import (
     DocumentMetadata,
     DocumentSearchResult,
@@ -18,6 +18,9 @@ from app.search.schemas import (
 from app.utils import setup_logger
 
 logger = setup_logger()
+
+INITIAL_TOP_K = 50  # Higher initial value to account for potential merges
+FINAL_TOP_RESULTS = 30  # Final results desired
 
 # Initialize Cohere client
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
@@ -31,13 +34,12 @@ co = cohere.Client(COHERE_API_KEY)
 
 
 async def embed_query(query: str) -> cohere.EmbedResponse:
-    """
-    Generate embedding for the given query using Cohere's embedding model.
-    """
+    """Embed the search query using Cohere."""
     try:
         response = co.embed(
             texts=[query],
             model="embed-english-v3.0",
+            truncate="LEFT",
             input_type="search_query",
         )
         return response
@@ -46,292 +48,282 @@ async def embed_query(query: str) -> cohere.EmbedResponse:
         raise
 
 
+def create_metadata(doc: DocumentDB) -> DocumentMetadata:
+    """
+    Helper function to create metadata for a document.
+    """
+    return DocumentMetadata(
+        id=doc.id,
+        file_id=doc.file_id,
+        file_name=doc.file_name,
+        title=doc.title,
+        summary=doc.summary,
+        pdf_url=doc.pdf_url,
+        countries=doc.countries,
+        organizations=doc.organizations,
+        regions=doc.regions,
+        year=doc.year,
+    )
+
+
 async def perform_semantic_search(
-    session: AsyncSession, embedding: list[float], top_k: int
-) -> list[Tuple[DocumentDB, float]]:
-    """
-    Perform semantic search using pgvector to find similar document embeddings.
-    Returns a list of tuples (DocumentDB, distance).
-    """
+    session: AsyncSession,
+    embedding: List[float],
+    top_k: int,
+    country: Optional[str] = None,
+    organization: Optional[str] = None,
+    region: Optional[str] = None,
+) -> List[Tuple[DocumentDB, float]]:
+    """Perform semantic search using cosine distance."""
     try:
-        # Build the query using SQLAlchemy in descending order
         distance = DocumentDB.content_embedding.cosine_distance(embedding).label(
             "distance"
         )
 
-        stmt = select(DocumentDB, distance).order_by(distance).limit(top_k)
+        stmt = select(DocumentDB, distance)
+        if country:
+            stmt = stmt.where(
+                DocumentDB.countries.op("@>")(cast(f'["{country}"]', JSONB))
+            )
+        if organization:
+            stmt = stmt.where(
+                DocumentDB.organizations.op("@>")(cast(f'["{organization}"]', JSONB))
+            )
+        if region:
+            stmt = stmt.where(DocumentDB.regions.op("@>")(cast(f'["{region}"]', JSONB)))
+
+        stmt = stmt.order_by(distance).limit(top_k)
         result = await session.execute(stmt)
         documents = result.fetchall()
-        return documents  # Each item is a tuple (DocumentDB, distance)
+        return documents
     except Exception as e:
         logger.error(f"Error performing semantic search: {e}")
         raise
 
 
 async def perform_keyword_search(
-    session: AsyncSession, query_str: str, top_k: int
-) -> list[Tuple[DocumentDB, float]]:
-    """
-    Perform keyword-based search using PostgreSQL's full-text search capabilities.
-    Returns a list of tuples (DocumentDB, rank).
-    """
+    session: AsyncSession,
+    query_str: str,
+    top_k: int,
+    country: Optional[str] = None,
+    organization: Optional[str] = None,
+    region: Optional[str] = None,
+) -> List[Tuple[DocumentDB, float]]:
+    """Perform keyword search using ts_rank_cd."""
     try:
         rank = func.ts_rank_cd(
             func.to_tsvector("english", DocumentDB.contextualized_chunk),
             func.plainto_tsquery("english", query_str),
         ).label("rank")
 
-        stmt = (
-            select(DocumentDB, rank)
-            .where(
-                func.to_tsvector("english", DocumentDB.contextualized_chunk).op("@@")(
-                    func.plainto_tsquery("english", query_str)
-                )
+        stmt = select(DocumentDB, rank).where(
+            func.to_tsvector("english", DocumentDB.contextualized_chunk).op("@@")(
+                func.plainto_tsquery("english", query_str)
             )
-            .order_by(rank.desc())
-            .limit(top_k)
         )
+        if country:
+            stmt = stmt.where(
+                DocumentDB.countries.op("@>")(cast(f'["{country}"]', JSONB))
+            )
+        if organization:
+            stmt = stmt.where(
+                DocumentDB.organizations.op("@>")(cast(f'["{organization}"]', JSONB))
+            )
+        if region:
+            stmt = stmt.where(DocumentDB.regions.op("@>")(cast(f'["{region}"]', JSONB)))
+
+        stmt = stmt.order_by(rank.desc()).limit(top_k)
         result = await session.execute(stmt)
         documents = result.fetchall()
-        return documents  # Each item is a tuple (DocumentDB, rank)
+        return documents
     except Exception as e:
         logger.error(f"Error performing keyword search: {e}")
         raise
 
 
 async def hybrid_search(
-    session: AsyncSession, query_str: str, top_k: int, precision: bool = False
+    session: AsyncSession,
+    query_str: str,
+    precision: bool = False,
+    country: Optional[str] = None,
+    organization: Optional[str] = None,
+    region: Optional[str] = None,
 ) -> List[DocumentSearchResult]:
-    """
-    Perform a hybrid search combining semantic and keyword search results.
-
-    Groups matches by document, ranks documents by best match score, and includes
-    multiple matches per document.
-
-    Args:
-        session: Async SQLAlchemy session.
-        query_str: The search query string.
-        top_k: The number of top results to return.
-        precision: If True, performs precision search by re-ranking QA pairs.
-
-    Returns:
-        A list of DocumentSearchResult objects containing the documents and their
-        matches.
-    """
+    """Hybrid search combining semantic and keyword search with reranking."""
     try:
-        # Perform semantic search
+        # Embed the query
         embedding_response = await embed_query(query_str)
+
+        # Perform semantic and keyword searches with the higher `INITIAL_TOP_K`
         semantic_results = await perform_semantic_search(
-            session, embedding_response.embeddings[0], top_k
+            session,
+            embedding_response.embeddings[0],
+            INITIAL_TOP_K,
+            country=country,
+            organization=organization,
+            region=region,
         )
-        # Perform keyword search
-        keyword_results = await perform_keyword_search(session, query_str, top_k)
 
-        # Combine results into an ordered dictionary to remove duplicates
-        combined_results = OrderedDict()
-        for doc, _ in semantic_results:
-            if doc.id not in combined_results:
-                combined_results[doc.id] = doc
+        keyword_results = await perform_keyword_search(
+            session,
+            query_str,
+            INITIAL_TOP_K,
+            country=country,
+            organization=organization,
+            region=region,
+        )
 
-        for doc, _ in keyword_results:
-            if doc.id not in combined_results:
-                combined_results[doc.id] = doc
+        # Combine results and remove duplicates
+        combined_results = semantic_results + keyword_results
+        unique_matches = {
+            (doc.id, doc.page_number): (doc, score) for doc, score in combined_results
+        }
+        combined_results = list(unique_matches.values())
 
-        if not precision:
-            # Regular search mode
-            texts = []
-            match_info = []
-            for doc in combined_results.values():
-                # Prepare text for re-ranking
-                texts.append(doc.contextualized_chunk)
-                match_info.append(
-                    {
-                        "doc": doc,
-                        "chunk": doc.contextualized_chunk,
-                        "page_number": doc.page_number,
-                    }
-                )
+        # Collect texts and match info for reranking
+        texts = []
+        match_info = []
 
-            # Use Cohere's rerank API
-            rerank_response = co.rerank(
-                model="rerank-english-v3.0",
-                query=query_str,
-                documents=texts,
-                top_n=None,
-                return_documents=False,
-            )
-
-            # Collect reranked matches
-            matches = []
-            for rank, result in enumerate(rerank_response.results):
-                index = result.index
-                relevance_score = result.relevance_score
-                info = match_info[index]
-                doc = info["doc"]
-                matches.append(
-                    {
-                        "doc_id": doc.id,
-                        "doc": doc,
-                        "page_number": info["page_number"],
-                        "chunk": info["chunk"],
-                        "relevance_score": relevance_score,
-                        "rank": rank + 1,
-                    }
-                )
-
-            # Group matches by document
-            documents = {}
-            for match in matches:
-                doc_id = match["doc_id"]
-                if doc_id not in documents:
-                    documents[doc_id] = {
-                        "doc": match["doc"],
-                        "matches": [],
-                        "best_score": match["relevance_score"],
-                    }
-                documents[doc_id]["matches"].append(match)
-                # Update best score if necessary
-                if match["relevance_score"] > documents[doc_id]["best_score"]:
-                    documents[doc_id]["best_score"] = match["relevance_score"]
-
-            # Sort documents by best_score
-            sorted_docs = sorted(
-                documents.values(),
-                key=lambda x: x["best_score"],
-                reverse=True,
-            )
-
-            # Prepare the final results
-            final_results = []
-            for doc_entry in sorted_docs:
-                doc = doc_entry["doc"]
-                matches = doc_entry["matches"]
-                # Sort matches by their rank
-                matches.sort(key=lambda x: x["rank"])
-                # Prepare MatchedChunk instances
-                matched_chunks = [
-                    MatchedChunk(
-                        page_number=match["page_number"],
-                        contextualized_chunk=match["chunk"],
-                        relevance_score=match["relevance_score"],
-                        rank=match["rank"],
-                    )
-                    for match in matches
-                ]
-                # Prepare DocumentMetadata
-                metadata = DocumentMetadata.from_orm(doc)
-                # Create DocumentSearchResult
-                result = DocumentSearchResult(
-                    metadata=metadata,
-                    matches=matched_chunks,
-                )
-                final_results.append(result)
-
-            return final_results
-
-        else:
-            # Precision mode
-            texts = []
-            match_info = []
-            for doc in combined_results.values():
-                # Ensure qa_pairs are loaded
+        if precision:
+            # For precision search, collect QA pairs
+            for doc, _score in combined_results:
                 await session.refresh(doc, ["qa_pairs"])
-                chunk_summary = doc.chunk_summary or ""
                 for qa_pair in doc.qa_pairs:
-                    text = f"""{chunk_summary} Question: {qa_pair.question}
-                    Answer: {qa_pair.answer}"""
-                    print(text)
+                    text = f"Question: {qa_pair.question} Answer: {qa_pair.answer}"
                     texts.append(text)
                     match_info.append(
                         {
                             "doc": doc,
                             "qa_pair": qa_pair,
                             "page_number": doc.page_number,
-                            "chunk_summary": chunk_summary,
+                            # Removed 'initial_score'
                         }
                     )
-
-            if not texts:
-                return []
-
-            # Use Cohere's rerank API
-            rerank_response = co.rerank(
-                model="rerank-english-v3.0",
-                query=query_str,
-                documents=texts,
-                top_n=None,
-                return_documents=False,
-            )
-
-            # Collect reranked matches
-            matches = []
-            for rank, result in enumerate(rerank_response.results):
-                index = result.index
-                relevance_score = result.relevance_score
-                info = match_info[index]
-                doc = info["doc"]
-                qa_pair = info["qa_pair"]
-                matches.append(
+        else:
+            # For standard search, collect chunks
+            for doc, _score in combined_results:
+                text = doc.contextualized_chunk
+                texts.append(text)
+                match_info.append(
                     {
-                        "doc_id": doc.id,
+                        "doc": doc,
+                        "page_number": doc.page_number,
+                        # Removed 'initial_score'
+                    }
+                )
+
+        if not texts:
+            return []
+
+        # Rerank using Cohere
+        rerank_response = co.rerank(
+            model="rerank-english-v3.0",
+            query=query_str,
+            documents=texts,
+            top_n=None,
+            return_documents=False,
+        )
+
+        # Collect reranked matches
+        reranked_matches = []
+        for rank, result in enumerate(rerank_response.results):
+            index = result.index
+            info = match_info[index]
+            doc = info["doc"]
+            if precision:
+                qa_pair = info["qa_pair"]
+                reranked_matches.append(
+                    {
                         "doc": doc,
                         "qa_pair": qa_pair,
                         "page_number": info["page_number"],
-                        "relevance_score": relevance_score,
+                        "rank": rank + 1,
+                    }
+                )
+            else:
+                reranked_matches.append(
+                    {
+                        "doc": doc,
+                        "page_number": info["page_number"],
                         "rank": rank + 1,
                     }
                 )
 
-            # Group matches by document
-            documents = {}
-            for match in matches:
-                doc_id = match["doc_id"]
-                if doc_id not in documents:
-                    documents[doc_id] = {
-                        "doc": match["doc"],
-                        "matches": [],
-                        "best_score": match["relevance_score"],
-                    }
-                documents[doc_id]["matches"].append(match)
-                # Update best score if necessary
-                if match["relevance_score"] > documents[doc_id]["best_score"]:
-                    documents[doc_id]["best_score"] = match["relevance_score"]
+        # Take top matches
+        top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-            # Sort documents by best_score
-            sorted_docs = sorted(
-                documents.values(),
-                key=lambda x: x["best_score"],
-                reverse=True,
-            )
+        # Group matches by document_id
+        documents = {}
+        for match in top_matches:
+            doc = match["doc"]
+            document_id = doc.document_id
+            if document_id not in documents:
+                documents[document_id] = {
+                    "doc": doc,
+                    "matches": [],
+                    "best_rank": match["rank"],
+                }
+            documents[document_id]["matches"].append(match)
+            if match["rank"] < documents[document_id]["best_rank"]:
+                documents[document_id]["best_rank"] = match["rank"]
 
-            # Prepare the final results
-            final_results = []
-            for doc_entry in sorted_docs:
-                doc = doc_entry["doc"]
-                matches = doc_entry["matches"]
-                # Sort matches by their rank
-                matches.sort(key=lambda x: x["rank"])
-                # Prepare MatchedQAPair instances
+        # Sort documents by best_rank
+        sorted_documents = sorted(documents.values(), key=lambda x: x["best_rank"])
+
+        # Build final results
+        final_results = []
+        for doc_entry in sorted_documents:
+            doc = doc_entry["doc"]
+            matches = doc_entry["matches"]
+            if precision:
                 matched_qas = [
                     MatchedQAPair(
                         page_number=match["page_number"],
                         question=match["qa_pair"].question,
                         answer=match["qa_pair"].answer,
-                        relevance_score=match["relevance_score"],
                         rank=match["rank"],
                     )
                     for match in matches
                 ]
-                # Prepare DocumentMetadata
-                metadata = DocumentMetadata.from_orm(doc)
-                # Create DocumentSearchResult
-                result = DocumentSearchResult(
-                    metadata=metadata,
-                    matches=matched_qas,
+                num_matches = len(matched_qas)
+                final_results.append(
+                    DocumentSearchResult(
+                        metadata=create_metadata(doc),
+                        matches=matched_qas,
+                        num_matches=num_matches,
+                    )
                 )
-                final_results.append(result)
+            else:
+                # Generate explanations
+                explanations_tasks = [
+                    asyncio.to_thread(
+                        generate_query_match_explanation,
+                        query_str,
+                        doc.contextualized_chunk,
+                    )
+                    for match in matches
+                ]
+                explanations = await asyncio.gather(*explanations_tasks)
 
-            return final_results
+                matched_chunks = [
+                    MatchedChunk(
+                        page_number=match["page_number"],
+                        rank=match["rank"],
+                        explanation=explanations[i],
+                    )
+                    for i, match in enumerate(matches)
+                ]
+                num_matches = len(matched_chunks)
+
+                final_results.append(
+                    DocumentSearchResult(
+                        metadata=create_metadata(doc),
+                        matches=matched_chunks,
+                        num_matches=num_matches,
+                    )
+                )
+
+        return final_results
 
     except Exception as e:
         logger.error(f"Error performing hybrid search: {e}")
