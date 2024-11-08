@@ -32,20 +32,16 @@ def generate_contextual_summary(document_content: str, chunk_content: str) -> st
     retrieval of the chunk.
     Answer only with the succinct context and nothing else.
     """
-    prompt += "\n"
     try:
-        # Comment out the OpenAI API call
-        # response = client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=150,
-        #     temperature=0,
-        # )
-        # summary = response.choices[0].message.content.strip()
-
-        # Return a dummy summary
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=150,
+            temperature=0,
+        )
+        summary = response.choices[0].message.content.strip()
         summary = (
             "This chunk contains questions about contraception awareness and attitudes."
         )
@@ -64,21 +60,18 @@ def generate_brief_summary(document_content: str) -> str:
     prompt = (
         f"Summarize the following document in 10 to 15 words:\n\n{document_content}"
     )
-    prompt += "\n"
 
     try:
-        # Comment out the OpenAI API call
-        # response = client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=20,
-        #     temperature=0.5,
-        # )
-        # summary = response.choices[0].message.content.strip()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=20,
+            temperature=0.5,
+        )
+        summary = response.choices[0].message.content.strip()
 
-        # Return a dummy brief summary
         summary = "Survey questionnaire focusing on men's reproductive health."
 
         return summary
@@ -111,21 +104,16 @@ def generate_smart_filename(file_name: str, document_content: str) -> str:
 
     Filename:
     """
-    prompt += "\n"
     try:
-        # Comment out the OpenAI API call
-        # response = client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=10,
-        #     temperature=0.5,
-        # )
-        # smart_name = response.choices[0].message.content.strip()
-
-        # Return a dummy filename
-        smart_name = "Men's Health Survey Questionnaire"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=10,
+            temperature=0.5,
+        )
+        smart_name = response.choices[0].message.content.strip()
 
         return smart_name
     except Exception as e:
@@ -161,44 +149,19 @@ def extract_question_answer_from_page(chunk_content: str) -> list[dict]:
 
     Your answer:
     """
-    prompt += "\n"
 
     try:
-        # Comment out the OpenAI API call
-        # response = client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=1000,  # Increase to ensure full responses
-        #     temperature=0,
-        # )
-        # qa_pairs_str = response.choices[0].message.content.strip()
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=1000,
+            temperature=0,
+        )
+        qa_pairs_str = response.choices[0].message.content.strip()
 
-        # Return dummy QA pairs
-        qa_pairs = [
-            {
-                "question": "Have you heard about family planning on the radio?",
-                "answers": ["Yes", "No"],
-            },
-            {
-                "question": "Do you agree  contraception is a woman's concern a man?",
-                "answers": ["Agree", "Disagree", "Don't know"],
-            },
-            {
-                "question": "Do you watch television at least once a or not at all?",
-                "answers": [
-                    "At least once a week",
-                    "Less than once a week",
-                    "Not at all",
-                ],
-            },
-        ]
-
-        # If you want to test with an empty list, you can uncomment the line below
-        # qa_pairs = []
-
-        return qa_pairs
+        return qa_pairs_str
     except Exception as e:
         logger.error(f"Error extracting questions and answers: {e}")
         return []
@@ -218,22 +181,17 @@ def generate_query_match_explanation(query: str, chunk_content: str) -> str:
     Provide a one-sentence explanation starting with "Mentions ..." to explain why the
     chunk matches the query.
     """
-    prompt += "\n"
 
     try:
-        # response = client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=1000,  # Increase to ensure full responses
-        #     temperature=0,
-        # )
-        # qa_pairs_str = response.choices[0].message.content.strip()
-
-        # Dummy explanation for testing
-        explanation = f"""Mentions how '{query}' relates to contraception and family
-        planning."""
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=250,
+            temperature=0,
+        )
+        explanation = response.choices[0].message.content.strip()
 
         return explanation
     except Exception as e:
