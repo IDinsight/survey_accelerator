@@ -197,8 +197,13 @@ def generate_query_match_explanation(query: str, chunk_content: str) -> str:
     And the following chunk from a document:
     "{chunk_content}"
 
-    Provide a one-sentence explanation starting with "Mentions ..." to explain why the
+    Provide a one-sentence, 12 word maximum explanation starting with "Mentions ..."
+    to explain why the
     chunk matches the query.
+
+    Be extremely specific to the document at hand and avoid generalizations
+    or inferences. Do not mention the query in the explanation.
+    Do not include any additional text outside the explanation.
     """
 
     try:
