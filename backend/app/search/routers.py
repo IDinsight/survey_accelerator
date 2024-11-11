@@ -3,8 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import authenticate_key
 from app.database import get_async_session
+from app.search.models import log_search
 from app.search.schemas import SearchRequest, SearchResponse
 from app.search.utils import hybrid_search
+from app.utils import setup_logger
+
+logger = setup_logger()
 
 router = APIRouter(
     prefix="/search",
@@ -45,12 +49,19 @@ async def search_documents(
                 query=request.query, results=[], message="No matching documents found."
             )
 
-        return SearchResponse(
+        return_result = SearchResponse(
             query=request.query,
             results=results,
             message="Search completed successfully.",
         )
 
+        # Log the search with the precision value
+        await log_search(
+            session, request.query, return_result.model_dump_json(), request.precision
+        )
+
+        return return_result
+
     except Exception as e:
-        # Log or raise the exception as needed
+        logger.error(f"Error during search for query '{request.query}': {e}")
         raise e
