@@ -68,10 +68,12 @@ const AdvancedSearchEngine: React.FC = () => {
       <div
         className="p-6 overflow-y-auto shadow-2xl relative"
         style={{
-          width: '28%',
+          width: '28%', // Fixed width for the sidebar
+          flexBasis: '28%', // Ensures flexbox layout respects the fixed width
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
         }}
       >
+
         {/* Search Form */}
         <div className="mb-6">
           <img src="banner.png" alt="Banner" className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg" />
