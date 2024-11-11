@@ -1,5 +1,3 @@
-// src/AdvancedSearchEngine.tsx
-
 import React, { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import SearchResultCard from './components/SearchResultCard';
@@ -15,6 +13,7 @@ const AdvancedSearchEngine: React.FC = () => {
   const [currentPageNumber, setCurrentPageNumber] = useState<number | null>(null);
   const [searchCollapsed, setSearchCollapsed] = useState<boolean>(false);
   const [precisionSearch, setPrecisionSearch] = useState<boolean>(false);
+  const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null);
 
   // Handle search form submission
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -29,6 +28,15 @@ const AdvancedSearchEngine: React.FC = () => {
       const results = await searchDocuments(query, 10, precisionSearch, country, organization, region);
       setSearchResults(results);
       setSearchCollapsed(true);
+      if (results.length > 0) {
+        const topResult = results[0];
+        setSelectedPDF(topResult.metadata.pdf_url ?? null);
+        setSelectedCardId(topResult.metadata.id);
+        if (topResult.matches.length > 0) {
+          setCurrentPageNumber(topResult.matches[0].page_number);
+          setSelectedHighlightedId(topResult.matches[0].rank);
+        }
+      }
     } catch (error) {
       console.error('Error searching documents:', error);
     }
@@ -42,6 +50,7 @@ const AdvancedSearchEngine: React.FC = () => {
       setSelectedPDF(null);
       setSelectedCardId(null);
       setCurrentPageNumber(null);
+      setSelectedHighlightedId(null);
     }
   };
 
@@ -49,7 +58,14 @@ const AdvancedSearchEngine: React.FC = () => {
   const handleCardClick = (result: DocumentSearchResult) => {
     setSelectedPDF(result.metadata.pdf_url ?? null);
     setSelectedCardId(result.metadata.id);
-    setCurrentPageNumber(null);
+    setCurrentPageNumber(null); // Reset the page number when a new PDF is selected
+    setSelectedHighlightedId(null); // Clear previous highlights
+
+    // Set default to top match for the newly selected card
+    if (result.matches.length > 0) {
+      setCurrentPageNumber(result.matches[0].page_number);
+      setSelectedHighlightedId(result.matches[0].rank);
+    }
   };
 
   // Handle match click to navigate PDF to specific page
@@ -66,10 +82,10 @@ const AdvancedSearchEngine: React.FC = () => {
     <div className="flex h-screen bg-gray-100">
       {/* Left Side - Search Form and Results */}
       <div
-        className="p-6 overflow-y-auto shadow-2xl relative"
+        className="p-6 overflow-y-auto shadow-2xl"
         style={{
-          width: '28%', // Fixed width for the sidebar
-          flexBasis: '28%', // Ensures flexbox layout respects the fixed width
+          flex: '0 0 28%', // Make the sidebar strictly 28% of the screen width
+          maxWidth: '28%', // Fix maximum width to prevent shrinking or expanding
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
         }}
       >
@@ -117,10 +133,14 @@ const AdvancedSearchEngine: React.FC = () => {
       </div>
 
       {/* Right Side - PDF Viewer and Matches */}
-      <div className="flex flex-col flex-grow h-full">
+      <div className="flex flex-col flex-grow h-full overflow-hidden">
         {/* PDF Viewer */}
-        <div className="flex-grow min-h-0">
-          <PDFViewer pdfUrl={selectedPDF || ''} pageNumber={currentPageNumber || undefined} />
+        <div className="flex-grow min-h-0 overflow-hidden">
+          <PDFViewer
+            key={`${selectedPDF}-${currentPageNumber}`} // Unique key to ensure re-render
+            pdfUrl={selectedPDF || ''}
+            pageNumber={currentPageNumber || undefined}
+          />
         </div>
 
         {/* Selected Result Display */}
@@ -130,10 +150,12 @@ const AdvancedSearchEngine: React.FC = () => {
           );
 
           return selectedResult ? (
-            <SelectedResultDisplay
-              selectedResult={selectedResult}
-              onMatchClick={handleMatchClick}
-            />
+            <div className="overflow-y-auto p-4 bg-white rounded-t-lg shadow" style={{ maxHeight: '30%' }}>
+              <SelectedResultDisplay
+                selectedResult={selectedResult}
+                onMatchClick={handleMatchClick}
+              />
+            </div>
           ) : null;
         })()}
       </div>
