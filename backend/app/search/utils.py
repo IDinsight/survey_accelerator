@@ -278,7 +278,11 @@ async def hybrid_search(
                 matched_qas = MatchedQAPair(
                     page_number=match["page_number"],
                     question=match["qa_pair"].question,
-                    answer=match["qa_pair"].answer,
+                    answer=(
+                        match["qa_pair"].answer
+                        if match["qa_pair"].answer is not None
+                        else "None extracted"
+                    ),
                     rank=match["rank"],
                 )
                 documents[document_id]["matches"].append(matched_qas)
