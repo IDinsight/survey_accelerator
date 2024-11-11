@@ -1,5 +1,8 @@
-// src/api.ts
 import axios from 'axios';
+
+// Set the backend API URL and authorization token from environment variables
+const backendApiUrl = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:8000';
+const authToken = process.env.REACT_APP_AUTH_TOKEN || 'kk';
 
 export const searchDocuments = async (
   query: string,
@@ -10,21 +13,26 @@ export const searchDocuments = async (
   region: string
 ) => {
   try {
-    const response = await axios.post('http://localhost:8000/search/', {
-      query,
-      top_k,
-      precision,
-      country,
-      organization,
-      region,
-    }, {
-      headers: {
-        'Authorization': `Bearer kk`,
-        'Content-Type': 'application/json',
+    // Make the POST request to the search endpoint with headers and data
+    const response = await axios.post(
+      `${backendApiUrl}/search`,
+      {
+        query,
+        top_k,
+        precision,
+        country,
+        organization,
+        region,
       },
-    });
+      {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // Return response data, handle any errors upstream
+    // Return results data or an empty array if not present
     return response.data.results || [];
   } catch (error) {
     console.error('Error fetching search results:', error);
