@@ -1,6 +1,5 @@
 version: '3.8'
 
-
 services:
   backend:
     build:
@@ -27,6 +26,16 @@ services:
     ports: # Expose the port to port 5434 on the host machine for debugging
       - 5434:5432
 
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
 
 volumes:
   temp:
