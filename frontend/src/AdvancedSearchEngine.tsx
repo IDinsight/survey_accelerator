@@ -5,6 +5,7 @@ import PDFViewer from './components/PDFViewer';
 import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
 import { DocumentSearchResult } from './interfaces';
+import { FaSpinner } from 'react-icons/fa'; // Import an icon for a spinner
 
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
@@ -14,10 +15,14 @@ const AdvancedSearchEngine: React.FC = () => {
   const [searchCollapsed, setSearchCollapsed] = useState<boolean>(false);
   const [precisionSearch, setPrecisionSearch] = useState<boolean>(false);
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Handle search form submission
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoading(true); // Set loading to true when search starts
+    setErrorMessage(null); // Clear any previous error messages
     const formData = new FormData(event.currentTarget);
     const query = formData.get('search') as string;
     const country = formData.get('country') as string;
@@ -38,7 +43,13 @@ const AdvancedSearchEngine: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error searching documents:', error);
+      if (error instanceof Error) {
+        setErrorMessage(error.message); // Set the error message if request fails
+      } else {
+        setErrorMessage('An unknown error occurred.');
+      }
+    } finally {
+      setLoading(false); // Set loading to false once the request is complete
     }
   };
 
@@ -89,7 +100,6 @@ const AdvancedSearchEngine: React.FC = () => {
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
         }}
       >
-
         {/* Search Form */}
         <div className="mb-6">
           <img src="banner.png" alt="Banner" className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg" />
@@ -116,20 +126,36 @@ const AdvancedSearchEngine: React.FC = () => {
           )}
         </div>
 
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="flex justify-center items-center">
+            <FaSpinner className="animate-spin text-blue-500 text-3xl" />
+          </div>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mt-4 p-4 text-red-500 bg-red-100 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
         {/* Search Results */}
-        <div className="space-y-4">
-          {searchResults.length > 0 && <h3 className="text-xl font-semibold">Search Results:</h3>}
-          {searchResults.map((result) => (
-            <div key={result.metadata.id}>
-              <SearchResultCard
-                result={result}
-                onClick={handleCardClick}
-                isSelected={selectedCardId === result.metadata.id}
-                precisionSearch={precisionSearch}
-              />
-            </div>
-          ))}
-        </div>
+        {!loading && !errorMessage && (
+          <div className="space-y-4">
+            {searchResults.length > 0 && <h3 className="text-xl font-semibold">Search Results:</h3>}
+            {searchResults.map((result) => (
+              <div key={result.metadata.id}>
+                <SearchResultCard
+                  result={result}
+                  onClick={handleCardClick}
+                  isSelected={selectedCardId === result.metadata.id}
+                  precisionSearch={precisionSearch}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Right Side - PDF Viewer and Matches */}
@@ -150,7 +176,7 @@ const AdvancedSearchEngine: React.FC = () => {
           );
 
           return selectedResult ? (
-            <div className="overflow-y-auto p-4 bg-white rounded-t-lg shadow" style={{ maxHeight: '30%' }}>
+            <div className="overflow-y-auto p-0 bg-white shadow" style={{ maxHeight: '30%' }}>
               <SelectedResultDisplay
                 selectedResult={selectedResult}
                 onMatchClick={handleMatchClick}

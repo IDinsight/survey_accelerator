@@ -29,6 +29,7 @@ export const searchDocuments = async (
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
+        timeout: 25000, // Set timeout of 25 seconds
       }
     );
 
@@ -36,6 +37,6 @@ export const searchDocuments = async (
     return response.data.results || [];
   } catch (error) {
     console.error('Error fetching search results:', error);
-    return [];
+    throw new Error('Search request timed out or failed. Please try again.');
   }
 };

@@ -25,7 +25,7 @@ const MatchesList: React.FC<MatchesListProps> = ({
 
   return (
     <div
-      className="mt-4 p-4 bg-white rounded-lg shadow overflow-y-auto"
+      className=" p-2 bg-white rounded-lg shadow overflow-y-auto"
       style={{ maxHeight: '22vh' }} // Limit height to 22% of viewport height
     >
       <h4 className="text-lg font-semibold">
