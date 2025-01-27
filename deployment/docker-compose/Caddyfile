@@ -1,0 +1,12 @@
+survey.idinsight.io {
+    # Route API requests to the backend
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    # Catch-all for all other requests to the frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+}

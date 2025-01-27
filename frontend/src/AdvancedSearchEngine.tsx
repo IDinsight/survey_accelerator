@@ -7,6 +7,8 @@ import { searchDocuments } from './api';
 import { DocumentSearchResult } from './interfaces';
 import { FaSpinner } from 'react-icons/fa'; // Import an icon for a spinner
 
+
+
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
   const [selectedPDF, setSelectedPDF] = useState<string | null>(null);
@@ -102,7 +104,7 @@ const AdvancedSearchEngine: React.FC = () => {
       >
         {/* Search Form */}
         <div className="mb-6">
-          <img src="banner.png" alt="Banner" className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg" />
+          <img src="/Banner.png" alt="Banner" className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg" />
           <div
             className={`transition-all duration-500 ease-in-out ${
               searchCollapsed ? 'h-0 overflow-hidden' : 'h-auto'

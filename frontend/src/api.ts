@@ -1,8 +1,7 @@
 import axios from 'axios';
-
 // Set the backend API URL and authorization token from environment variables
-const backendApiUrl = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:8000';
-const authToken = process.env.REACT_APP_AUTH_TOKEN || 'kk';
+const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const authToken = process.env.NEXT_PUBLIC_BACKEND_PW || 'kk';
 
 export const searchDocuments = async (
   query: string,
@@ -15,7 +14,7 @@ export const searchDocuments = async (
   try {
     // Make the POST request to the search endpoint with headers and data
     const response = await axios.post(
-      `${backendApiUrl}/search`,
+      `${backendUrl}/search/`,
       {
         query,
         top_k,
