@@ -1,10 +1,9 @@
 import io
 
-from google.cloud import storage
-from google.oauth2 import service_account
-
 from app.config import SERVICE_ACCOUNT_FILE_PATH
 from app.utils import setup_logger
+from google.cloud import storage
+from google.oauth2 import service_account
 
 logger = setup_logger()
 

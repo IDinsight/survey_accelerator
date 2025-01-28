@@ -8,9 +8,7 @@ import secrets
 from logging import Logger
 from uuid import uuid4
 
-from .config import (
-    LOG_LEVEL,
-)
+from .config import LOG_LEVEL
 
 # To make 32-byte API keys (results in 43 characters)
 SECRET_KEY_N_BYTES = 32

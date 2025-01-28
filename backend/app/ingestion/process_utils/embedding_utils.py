@@ -1,7 +1,6 @@
 # utils/embedding_utils.py
 
 import cohere
-
 from app.config import COHERE_API_KEY
 from app.utils import setup_logger
 

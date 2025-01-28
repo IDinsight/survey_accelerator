@@ -1,13 +1,13 @@
 # routers.py
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth.dependencies import authenticate_key
-from app.ingestion.schemas import AirtableIngestionResponse
-from app.ingestion.utils.airtable_utils import (
+from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,
     get_missing_document_ids,
 )
+from app.ingestion.schemas import AirtableIngestionResponse
 from app.ingestion.utils.record_processing import ingest_records
 from app.utils import setup_logger
 
@@ -25,58 +25,6 @@ TAG_METADATA = {
 }
 
 
-@router.post("/airtable", response_model=AirtableIngestionResponse)
-async def ingest_airtable(
-    ids: list[int] = Body(..., embed=True),
-) -> AirtableIngestionResponse:
-    """
-    Ingest documents from Airtable records with page-level progress logging.
-    Accepts a list of document IDs to process.
-    """
-    try:
-        records = get_airtable_records()
-
-    except KeyError as e:
-        logger.error(f"Airtable configuration error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Airtable configuration error.",
-        ) from e
-
-    except Exception as e:
-        logger.error(f"Error fetching records from Airtable: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching records from Airtable: {e}",
-        ) from e
-
-    if not records:
-        return AirtableIngestionResponse(
-            total_records_processed=0,
-            total_chunks_created=0,
-            message="No records found in Airtable.",
-        )
-    # Map IDs to records
-    airtable_id_to_record = {}
-    for record in records:
-        fields = record.get("fields", {})
-        id_value = fields.get("ID")
-        if id_value is not None:
-            airtable_id_to_record[id_value] = record
-
-    records_to_process = [
-        airtable_id_to_record[id_] for id_ in ids if id_ in airtable_id_to_record
-    ]
-    if not records_to_process:
-        return AirtableIngestionResponse(
-            total_records_processed=0,
-            total_chunks_created=0,
-            message="No matching records found for the provided IDs.",
-        )
-
-    return await ingest_records(records_to_process)
-
-
 @router.post("/airtable/refresh", response_model=AirtableIngestionResponse)
 async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     """
@@ -84,7 +32,8 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     'document_id's. Automatically ingest the missing documents.
     """
     try:
-        records = get_airtable_records()
+        records = await get_airtable_records()
+        records = records[:3]
     except KeyError as e:
         logger.error(f"Airtable configuration error: {e}")
         raise HTTPException(
@@ -117,8 +66,7 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     # Map IDs to records
     airtable_id_to_record = {}
     for record in records:
-        fields = record.get("fields", {})
-        id_value = fields.get("ID")
+        id_value = record.get("fields").get("ID")
         if id_value is not None:
             airtable_id_to_record[id_value] = record
 

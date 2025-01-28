@@ -4,13 +4,12 @@ import io
 import os
 from typing import Optional
 
+from app.config import SCOPES, SERVICE_ACCOUNT_FILE_PATH
+from app.utils import setup_logger
 from google.oauth2 import service_account
 from googleapiclient.discovery import Resource as DriveResource
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-
-from app.config import SCOPES, SERVICE_ACCOUNT_FILE_PATH, XLSX_SUBDIR
-from app.utils import setup_logger
 
 logger = setup_logger()
 
@@ -26,7 +25,7 @@ def get_drive_service() -> DriveResource:
     return drive_service
 
 
-def extract_file_id(gdrive_url: str) -> str:
+async def extract_file_id(gdrive_url: str) -> str:
     """
     Extract the file ID from a Google Drive URL.
 
@@ -68,7 +67,7 @@ def extract_file_id(gdrive_url: str) -> str:
             )
 
 
-def determine_file_type(file_name: str) -> str:
+async def determine_file_type(file_name: str) -> str:
     """
     Determine the file type based on the file extension.
     """
@@ -81,56 +80,22 @@ def determine_file_type(file_name: str) -> str:
         return "other"
 
 
-def download_file(
-    file_id: str, file_name: str, file_type: str, drive_service: DriveResource
-) -> Optional[io.BytesIO]:
+def download_file(file_id: str, drive_service: DriveResource) -> Optional[io.BytesIO]:
     """
     Download a file from Google Drive using its file ID and handle it based on file type
     For PDFs, download into memory and return the BytesIO object.
     For XLSX, download and save to disk.
     """
     try:
-        # Get file metadata to determine MIME type
-        file_metadata = (
-            drive_service.files().get(fileId=file_id, fields="mimeType, name").execute()
-        )
-        mime_type = file_metadata.get("mimeType")
-
-        if (
-            file_type == "xlsx"
-            and mime_type == "application/vnd.google-apps.spreadsheet"
-        ):
-            # Export Google Sheets to Excel format
-            request = drive_service.files().export_media(
-                fileId=file_id,
-                mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-            save_path = os.path.join(
-                XLSX_SUBDIR,
-                (
-                    f"{file_name}.xlsx"
-                    if not file_name.lower().endswith(".xlsx")
-                    else file_name
-                ),
-            )
-            with open(save_path, "wb") as xlsx_file:
-                downloader = MediaIoBaseDownload(xlsx_file, request)
-                done = False
-                while not done:
-                    status, done = downloader.next_chunk()
-            return None  # No need to return anything for XLSX
-        elif file_type == "pdf":
-            # Download PDF files into memory
-            request = drive_service.files().get_media(fileId=file_id)
-            pdf_buffer = io.BytesIO()
-            downloader = MediaIoBaseDownload(pdf_buffer, request)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
-            pdf_buffer.seek(0)  # Reset buffer position to the beginning
-            return pdf_buffer  # Return the in-memory file for PDFs
-        else:
-            return None
+        logger.warning("Downloading PDF file...")
+        request = drive_service.files().get_media(fileId=file_id)
+        pdf_buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(pdf_buffer, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        pdf_buffer.seek(0)  # Reset buffer position to the beginning
+        return pdf_buffer  # Return the in-memory file for PDFs
 
     except Exception as e:
         logger.error(f"Error downloading file: {e}")

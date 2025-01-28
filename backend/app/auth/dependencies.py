@@ -4,7 +4,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 
-from .config import API_SECRET_KEY
+from ..config import API_SECRET_KEY
 
 bearer = HTTPBearer()
 

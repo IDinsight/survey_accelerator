@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.models import DocumentDB
-from app.ingestion.utils.openai_utils import generate_query_match_explanation
+from app.ingestion.process_utils.openai_utils import generate_query_match_explanation
 from app.search.schemas import (
     DocumentMetadata,
     DocumentSearchResult,

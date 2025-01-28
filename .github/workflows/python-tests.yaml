@@ -11,7 +11,6 @@ env:
   POSTGRES_PASSWORD: postgres-test-pw
   POSTGRES_USER: postgres-test-user
   POSTGRES_DB: postgres-test-db
-  REDIS_HOST: redis://redis:6379
 jobs:
   container-job:
     runs-on: ubuntu-20.04
@@ -54,7 +53,6 @@ jobs:
       - name: Run Unit Tests
         env:
           PROMETHEUS_MULTIPROC_DIR: /tmp
-          REDIS_HOST: ${{ env.REDIS_HOST }}
         run: |
           cd backend
           export POSTGRES_HOST=postgres POSTGRES_USER=$POSTGRES_USER \
