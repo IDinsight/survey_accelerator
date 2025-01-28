@@ -4,8 +4,9 @@ import json
 import os
 
 import openai
-from app.utils import setup_logger
 from openai import AsyncOpenAI
+
+from app.utils import setup_logger
 
 logger = setup_logger()
 
