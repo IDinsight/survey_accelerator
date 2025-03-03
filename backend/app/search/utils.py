@@ -54,7 +54,6 @@ def create_metadata(doc: DocumentDB) -> DocumentMetadata:
     """
     return DocumentMetadata(
         id=doc.id,
-        file_id=doc.file_id,
         file_name=doc.file_name,
         title=doc.title,
         summary=doc.summary,

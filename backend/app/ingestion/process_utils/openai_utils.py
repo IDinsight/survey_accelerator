@@ -87,7 +87,7 @@ json.**
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=1000,
+            max_tokens=2500,
             temperature=0,
         )
         qa_pairs_str = response.choices[0].message.content.strip()

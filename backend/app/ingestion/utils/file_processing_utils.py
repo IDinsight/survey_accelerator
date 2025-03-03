@@ -32,17 +32,25 @@ def parse_pdf_file(file_buffer: BinaryIO) -> list[str]:
     """
     Synchronously parse a PDF file into a list of page texts.
     """
-    pdf_reader = PyPDF2.PdfReader(file_buffer)
-    chunks: list[str] = []
-    num_pages = len(pdf_reader.pages)
-    for page_num in range(num_pages):
-        page = pdf_reader.pages[page_num]
-        page_text = page.extract_text()
-        if page_text and page_text.strip():
-            chunks.append(page_text.strip())
-    if not chunks:
-        raise RuntimeError("No text could be extracted from the uploaded PDF file.")
-    return chunks
+    try:
+        pdf_reader = PyPDF2.PdfReader(file_buffer)
+        chunks: list[str] = []
+        num_pages = len(pdf_reader.pages)
+        for page_num in range(num_pages):
+            page = pdf_reader.pages[page_num]
+            page_text = page.extract_text()
+            if page_text and page_text.strip():
+                chunks.append(page_text.strip())
+        if not chunks:
+            logger.warning("No text could be extracted from the uploaded PDF file.")
+            return []
+        return chunks
+    except PyPDF2.errors.PdfReadError as e:
+        logger.error(f"Error reading PDF file: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error parsing PDF file: {e}")
+        return []
 
 
 async def process_file(

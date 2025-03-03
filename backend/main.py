@@ -11,7 +11,7 @@ from gunicorn.glogging import Logger
 from loguru import logger
 from uvicorn.workers import UvicornWorker
 
-LOG_LEVEL = logging.getLevelName(os.environ.get("LOG_LEVEL", "DEBUG"))
+LOG_LEVEL = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
 JSON_LOGS = True if os.environ.get("JSON_LOGS", "0") == "1" else False
 WORKERS = int(os.environ.get("GUNICORN_WORKERS", "5"))
 
@@ -121,6 +121,7 @@ if __name__ == "__main__":
     options = {
         "bind": "0.0.0.0",
         "workers": WORKERS,
+        "timeout": 120,
         "accesslog": "-",
         "errorlog": "-",
         "worker_class": "__main__.Worker",  # use import path as string

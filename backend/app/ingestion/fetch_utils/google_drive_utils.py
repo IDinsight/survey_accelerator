@@ -1,41 +1,19 @@
-# utils/google_drive_utils.py
-
 import io
 import os
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional
 
 from app.config import SCOPES, SERVICE_ACCOUNT_FILE_PATH
 from app.utils import setup_logger
 from google.oauth2 import service_account
-from googleapiclient.discovery import Resource as DriveResource
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 logger = setup_logger()
 
 
-def get_drive_service() -> DriveResource:
-    """
-    Authenticate using a service account and return the Drive service.
-    """
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE_PATH, scopes=SCOPES
-    )
-    drive_service = build("drive", "v3", credentials=creds)
-    return drive_service
-
-
-async def extract_file_id(gdrive_url: str) -> str:
-    """
-    Extract the file ID from a Google Drive URL.
-
-    Supports URLs of the form:
-    - https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-    - https://drive.google.com/open?id=FILE_ID
-    - Any URL containing 'id=FILE_ID'
-    """
+def extract_file_id(gdrive_url: str) -> str:
     if "id=" in gdrive_url:
-        # URL contains 'id=FILE_ID'
         file_id = gdrive_url.split("id=")[1].split("&")[0]
         if file_id:
             return file_id
@@ -44,7 +22,6 @@ async def extract_file_id(gdrive_url: str) -> str:
                 "Invalid Google Drive URL format: missing file ID after 'id='."
             )
     else:
-        # Handle URLs of the form 'https://drive.google.com/file/d/FILE_ID/...'
         parts = gdrive_url.strip("/").split("/")
         if "d" in parts:
             d_index = parts.index("d")
@@ -62,15 +39,12 @@ async def extract_file_id(gdrive_url: str) -> str:
                 ) from e
         else:
             raise ValueError(
-                """URL format not recognized. Ensure it contains 'id=' or
-                follows the standard Drive URL format."""
+                """URL format not recognized. Ensure it contains 'id=' or follows the
+                standard Drive URL format."""
             )
 
 
-async def determine_file_type(file_name: str) -> str:
-    """
-    Determine the file type based on the file extension.
-    """
+def determine_file_type(file_name: str) -> str:
     _, ext = os.path.splitext(file_name.lower())
     if ext == ".pdf":
         return "pdf"
@@ -80,23 +54,96 @@ async def determine_file_type(file_name: str) -> str:
         return "other"
 
 
-def download_file(file_id: str, drive_service: DriveResource) -> Optional[io.BytesIO]:
+def download_file(file_id: str) -> Optional[io.BytesIO]:
     """
-    Download a file from Google Drive using its file ID and handle it based on file type
-    For PDFs, download into memory and return the BytesIO object.
-    For XLSX, download and save to disk.
+    Download a file from Google Drive using the Drive API.
     """
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE_PATH, scopes=SCOPES
+    )
+    drive_service = build("drive", "v3", credentials=creds)
     try:
-        logger.warning("Downloading PDF file...")
         request = drive_service.files().get_media(fileId=file_id)
-        pdf_buffer = io.BytesIO()
-        downloader = MediaIoBaseDownload(pdf_buffer, request)
+        file_buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(file_buffer, request)
         done = False
         while not done:
             status, done = downloader.next_chunk()
-        pdf_buffer.seek(0)  # Reset buffer position to the beginning
-        return pdf_buffer  # Return the in-memory file for PDFs
-
+        if file_buffer.getbuffer().nbytes == 0:
+            raise RuntimeError("No content was downloaded from the file.")
+        file_buffer.seek(0)
+        return file_buffer
     except Exception as e:
-        logger.error(f"Error downloading file: {e}")
+        logger.error(f"Error downloading file with ID '{file_id}': {e}")
         return None
+
+
+def download_file_wrapper(record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """A wrapper function to process each record and download its file."""
+    try:
+        fields = record.get("fields", {})
+        gdrive_link = fields.get("Drive link")
+        file_name = fields.get("File name")
+        document_id = fields.get("ID")
+        survey_name = fields.get("Survey name")
+        description = fields.get("Description")
+
+        if not gdrive_link or not file_name:
+            logger.error("Record is missing 'Drive link' or 'File name'")
+            return None
+
+        # Check if the file is a PDF (we only want to process PDFs)
+        file_type = determine_file_type(file_name)
+        if file_type != "pdf":
+            logger.info(f"Skipping non-PDF file: '{file_name}'")
+            return None
+
+        file_id = extract_file_id(gdrive_link)
+        if not file_id:
+            logger.error(f"Could not extract file ID from link '{gdrive_link}'")
+            return None
+
+        logger.info(f"Starting download of file '{file_name}'")
+        file_buffer = download_file(file_id)
+        if file_buffer is None:
+            logger.error(f"Failed to download file '{file_name}'")
+            return None
+
+        logger.info(f"Completed download of file '{file_name}'")
+        return {
+            "file_name": file_name,
+            "file_buffer": file_buffer,
+            "file_type": file_type,
+            "document_id": document_id,
+            "survey_name": survey_name,
+            "summary": description,
+            "fields": fields,
+        }
+    except Exception as e:
+        logger.error(f"Error downloading file '{file_name}': {e}")
+        return None
+
+
+def download_all_files(
+    records: List[Dict[str, Any]], n_max_workers: int
+) -> List[Dict[str, Any]]:
+    """Download all files concurrently using ThreadPoolExecutor."""
+    downloaded_files = []
+
+    with ThreadPoolExecutor(max_workers=n_max_workers) as executor:
+        # Map each record to a future
+        future_to_record = {
+            executor.submit(download_file_wrapper, record): record for record in records
+        }
+
+        for future in as_completed(future_to_record):
+            record = future_to_record[future]
+            file_name = record.get("fields", {}).get("File name", "Unknown")
+            try:
+                result = future.result()
+                if result is not None:
+                    downloaded_files.append(result)
+            except Exception as e:
+                logger.error(f"Error downloading file '{file_name}': {e}")
+
+    return downloaded_files

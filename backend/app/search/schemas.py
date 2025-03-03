@@ -19,7 +19,6 @@ class DocumentMetadata(BaseModel):
     """Schema for the document metadata."""
 
     id: int
-    file_id: str
     file_name: str
     title: str
     summary: str
