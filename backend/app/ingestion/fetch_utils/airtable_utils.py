@@ -2,13 +2,12 @@
 
 from typing import Any, Dict
 
-from pyairtable import Api
-from sqlalchemy import select
-
 from app.config import AIRTABLE_API_KEY, AIRTABLE_CONFIGS
 from app.database import get_async_session
 from app.ingestion.models import DocumentDB
 from app.utils import setup_logger
+from pyairtable import Api
+from sqlalchemy import select
 
 logger = setup_logger()
 
@@ -17,7 +16,7 @@ if not AIRTABLE_API_KEY:
     raise EnvironmentError("Airtable API key not found in environment variables.")
 
 
-def get_airtable_records() -> list:
+async def get_airtable_records() -> list:
     """
     Fetch records from Airtable and return a list of records.
     Raises exceptions if there are issues fetching the records.

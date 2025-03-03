@@ -1,5 +1,9 @@
 import os
 
+# Auth
+API_SECRET_KEY = os.getenv("API_SECRET_KEY", "kk")
+
+
 # PostgreSQL Configurations
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
@@ -8,12 +12,9 @@ POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.environ.get("POSTGRES_DB", "postgres")
 DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", 20))
 
-# Redis Configuration
-REDIS_HOST = os.environ.get("REDIS_HOST", "redis://localhost:6379")
-
 # Backend Configuration
-BACKEND_ROOT_PATH = os.environ.get("BACKEND_ROOT_PATH", "")
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARNING")
+BACKEND_ROOT_PATH = os.environ.get("BACKEND_ROOT_PATH", "./")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # PGVector Configuration
 PGVECTOR_VECTOR_SIZE = int(os.environ.get("PGVECTOR_VECTOR_SIZE", 1024))
@@ -50,6 +51,4 @@ SERVICE_ACCOUNT_FILE_PATH = os.environ.get(
 )
 
 # Other Configurations
-MAX_PAGES = int(os.environ.get("MAX_PAGES", 3))
 MAIN_DOWNLOAD_DIR = "downloaded_gdrives_sa"
-XLSX_SUBDIR = os.path.join(MAIN_DOWNLOAD_DIR, "xlsx")

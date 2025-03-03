@@ -2,7 +2,6 @@
 
 export interface Metadata {
     id: number;
-    file_id: string;
     file_name: string;
     title: string;
     summary: string;

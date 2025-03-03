@@ -3,7 +3,7 @@ database helper functions such as saving, updating, deleting, and retrieving doc
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
@@ -17,11 +17,15 @@ from app.config import (
     PGVECTOR_M,
     PGVECTOR_VECTOR_SIZE,
 )
+from app.database import get_async_session
 from app.utils import setup_logger
 
 from ..models import Base
 
 logger = setup_logger()
+
+# Maximum number of concurrent database operations
+MAX_CONCURRENT_DB_TASKS = 5
 
 
 class QAPairDB(Base):
@@ -65,7 +69,6 @@ class DocumentDB(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    file_id: Mapped[str] = mapped_column(String(length=36), nullable=False)
     file_name: Mapped[str] = mapped_column(String(length=150), nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(length=150), nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -101,13 +104,13 @@ class DocumentDB(Base):
 async def save_document_to_db(
     *,
     processed_pages: list[dict],
-    file_id: str,
     file_name: str,
     asession: AsyncSession,
     metadata: dict,
     pdf_url: str,
-    summary: str,
-    title: str,
+    summary: str = None,
+    title: str = None,
+    document_id: int,
 ) -> None:
     """
     Save documents and their associated QA pairs to the database.
@@ -132,20 +135,13 @@ async def save_document_to_db(
         logger.error(f"Error processing metadata for file '{file_name}': {e}")
         raise
 
-    documents = []
-
-    logger.debug(f"Processing {len(processed_pages)} pages for file '{file_name}'.")
-
+    # Process pages one by one to avoid transaction issues
     for idx, page in enumerate(processed_pages):
         logger.debug(f"Processing page {idx + 1}/{len(processed_pages)}.")
 
         try:
-            # Log the page content keys
-            logger.debug(f"Page keys: {list(page.keys())}")
-
             # Create DocumentDB instance for each page
             document = DocumentDB(
-                file_id=file_id,
                 file_name=file_name,
                 page_number=page["page_number"],
                 contextualized_chunk=page["contextualized_chunk"],
@@ -158,16 +154,13 @@ async def save_document_to_db(
                 regions=regions,
                 notes=notes,
                 drive_link=drive_link,
-                year=year,
+                year=metadata.get("Year"),
                 date_added=date_added,
-                document_id=document_id,
+                document_id=document_id,  # Using the document_id passed to the function
                 pdf_url=pdf_url,
                 summary=summary,
                 title=title,
             )
-
-            # Log the created DocumentDB instance
-            logger.debug(f"Created DocumentDB instance: {document}")
 
             # Create QAPairDB instances and associate them with the document
             extracted_qa_pairs = page.get("extracted_question_answers", [])
@@ -179,10 +172,6 @@ async def save_document_to_db(
 
             qa_pairs = []
             for qa_idx, qa_pair in enumerate(extracted_qa_pairs):
-                logger.debug(
-                    f"""Processing QA pair {qa_idx + 1}/{len(extracted_qa_pairs)}
-                    on page {idx + 1}."""
-                )
                 try:
                     question = qa_pair.get("question", "")
                     answers = qa_pair.get("answers", [])
@@ -199,31 +188,72 @@ async def save_document_to_db(
                         answer=answer_text,
                     )
 
-                    # Log the created QAPairDB instance
-                    logger.debug(f"Created QAPairDB instance: {qa_pair_instance}")
-
                     qa_pairs.append(qa_pair_instance)
                 except Exception as e:
                     logger.error(f"Error processing QA pair on page {idx + 1}: {e}")
 
             document.qa_pairs = qa_pairs
 
-            documents.append(document)
-        except Exception as e:
-            logger.error(f"Error processing page {idx + 1} for file '{file_name}': {e}")
+            # Add document to session and commit immediately
+            asession.add(document)
+            await asession.commit()
+            logger.debug(f"Saved page {idx + 1} for file '{file_name}'")
 
-    try:
-        # Add all documents (and their QA pairs) to the session
-        logger.debug(
-            f"Adding {len(documents)} documents to the session for file '{file_name}'."
-        )
-        asession.add_all(documents)
-        logger.debug("Committing the session.")
-        await asession.commit()  # Commit all at once
-        logger.debug("Session committed successfully.")
-    except Exception as e:
-        logger.error(f"Error committing to database for file '{file_name}': {e}")
-        await asession.rollback()
-        raise
+        except Exception as e:
+            logger.error(f"Error saving page {idx + 1} for file '{file_name}': {e}")
+            await asession.rollback()
+            # Continue with next page
 
     logger.debug(f"Finished save_document_to_db for file '{file_name}'.")
+
+
+async def save_single_document(metadata: Dict[str, Any]) -> bool:
+    """
+    Saves a single document to the database using the iterator-style session.
+    """
+    success = False
+
+    # Use the iterator style from the original code
+    async for asession in get_async_session():
+        try:
+            await save_document_to_db(
+                file_name=metadata["file_name"],
+                processed_pages=metadata["processed_pages"],
+                asession=asession,
+                metadata=metadata.get("fields", {}),
+                pdf_url=metadata.get("pdf_url", ""),  # Use empty string as fallback
+                title=metadata.get("survey_name"),
+                summary=metadata.get("summary"),
+                document_id=metadata.get(
+                    "document_id"
+                ),  # Pass document_id from metadata
+            )
+            logger.info(
+                f"File '{metadata['file_name']}' processed and saved successfully."
+            )
+            success = True
+            break  # Success, exit the loop
+        except Exception as e:
+            logger.error(
+                f"Error saving document '{metadata['file_name']}' to database: {e}"
+            )
+        finally:
+            # Explicitly close the session
+            await asession.close()
+
+    return success
+
+
+async def save_all_to_db(metadata_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Saves all documents to the database.
+    """
+    saved_documents = []
+
+    # Process each document sequentially
+    for metadata in metadata_list:
+        success = await save_single_document(metadata)
+        if success:
+            saved_documents.append(metadata)
+
+    return saved_documents

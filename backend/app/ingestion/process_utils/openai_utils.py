@@ -4,9 +4,8 @@ import json
 import os
 
 import openai
-from openai import AsyncOpenAI
-
 from app.utils import setup_logger
+from openai import AsyncOpenAI
 
 logger = setup_logger()
 
@@ -88,7 +87,7 @@ json.**
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=1000,
+            max_tokens=2500,
             temperature=0,
         )
         qa_pairs_str = response.choices[0].message.content.strip()
