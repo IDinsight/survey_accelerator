@@ -13,8 +13,8 @@ POSTGRES_DB = os.environ.get("POSTGRES_DB", "postgres")
 DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", 20))
 
 # Backend Configuration
-BACKEND_ROOT_PATH = os.environ.get("BACKEND_ROOT_PATH", "")
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARNING")
+BACKEND_ROOT_PATH = os.environ.get("BACKEND_ROOT_PATH", "./")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # PGVector Configuration
 PGVECTOR_VECTOR_SIZE = int(os.environ.get("PGVECTOR_VECTOR_SIZE", 1024))
