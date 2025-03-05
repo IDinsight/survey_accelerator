@@ -4,7 +4,7 @@ import SearchResultCard from './components/SearchResultCard';
 import PDFViewer from './components/PDFViewer';
 import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
-import { DocumentSearchResult } from './interfaces';
+import { DocumentSearchResult, MatchedChunk, MatchedQAPair } from './interfaces';
 import { FaSpinner } from 'react-icons/fa'; // Import an icon for a spinner
 
 
@@ -17,6 +17,7 @@ const AdvancedSearchEngine: React.FC = () => {
   const [searchCollapsed, setSearchCollapsed] = useState<boolean>(false);
   const [precisionSearch, setPrecisionSearch] = useState<boolean>(false);
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null);
+  const [highlightText, setHighlightText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -82,8 +83,25 @@ const AdvancedSearchEngine: React.FC = () => {
   };
 
   // Handle match click to navigate PDF to specific page
-  const handleMatchClick = (pageNumber: number) => {
+  const handleMatchClick = (pageNumber: number, matchId: number) => {
     setCurrentPageNumber(pageNumber);
+    setSelectedHighlightedId(matchId);
+
+    // Find the selected match and extract the starting_keyphrase for highlighting
+    if (selectedCardId) {
+      const selectedResult = searchResults.find(res => res.metadata.id === selectedCardId);
+      if (selectedResult) {
+        const selectedMatch = selectedResult.matches.find(match => match.rank === matchId);
+        if (selectedMatch) {
+          // Check if it's a generic search result with a starting_keyphrase
+          if (!precisionSearch && 'starting_keyphrase' in selectedMatch) {
+            setHighlightText((selectedMatch as MatchedChunk).starting_keyphrase || '');
+          } else {
+            setHighlightText(''); // Clear highlight for precision search
+          }
+        }
+      }
+    }
   };
 
   // Toggle between precision (QA) search and regular search
@@ -165,9 +183,10 @@ const AdvancedSearchEngine: React.FC = () => {
         {/* PDF Viewer */}
         <div className="flex-grow min-h-0 overflow-hidden">
           <PDFViewer
-            key={`${selectedPDF}-${currentPageNumber}`} // Unique key to ensure re-render
+            key={`${selectedPDF}-${currentPageNumber}-${highlightText}`} // Unique key to ensure re-render
             pdfUrl={selectedPDF || ''}
             pageNumber={currentPageNumber || undefined}
+            highlightText={highlightText}
           />
         </div>
 

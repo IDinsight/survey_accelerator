@@ -5,9 +5,11 @@ import React from 'react';
 interface PDFViewerProps {
   pdfUrl: string;
   pageNumber?: number;
+  highlightText?: string; // Keep this for interface compatibility
 }
 
 const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
+  // Simply append the page number to the URL if provided
   const src = pageNumber ? `${pdfUrl}#page=${pageNumber}` : pdfUrl;
 
   return (

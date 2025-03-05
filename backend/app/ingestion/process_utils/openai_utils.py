@@ -136,3 +136,59 @@ async def generate_query_match_explanation(query: str, chunk_content: str) -> st
     except Exception as e:
         logger.error(f"Error generating match explanation: {e}")
         return "Unable to generate explanation."
+
+
+async def extract_highlight_keyphrase(query: str, chunk_content: str) -> str:
+    """
+    Extract a verbatim text snippet from the chunk that best matches the query
+    for highlighting in the PDF viewer.
+
+    Args:
+        query: The search query
+        chunk_content: The text chunk content
+
+    Returns:
+        A verbatim text snippet (5-15 words) from the chunk that can be used to locate
+        the relevant part of the PDF for highlighting
+    """
+    prompt = f"""
+    Given the search query: "{query}"
+
+    And this document chunk:
+    "{chunk_content}"
+
+    Find and extract a VERBATIM sequence of 5-15 consecutive words from the chunk that:
+    1. Best relates to the search query
+    2. Would be most useful for highlighting in a PDF
+    3. Is EXACTLY as it appears in the chunk - do not modify ANY words or punctuation
+
+    Only return the extracted text snippet with no additional explanation, quotes,
+    or formatting. The text MUST appear EXACTLY as written in the original chunk,
+    preserving all capitalization
+    and spacing.
+    """
+
+    try:
+        response = await async_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=100,
+            temperature=0,
+        )
+        keyphrase = response.choices[0].message.content.strip()
+
+        # Verify the keyphrase exists in the chunk content
+        if keyphrase and keyphrase in chunk_content:
+            return keyphrase
+        else:
+            # If not found, fall back to first 30 characters or a substring that does
+            # exist
+            logger.warning(f"Extracted keyphrase not found in chunk: {keyphrase}")
+            fallback = chunk_content[: min(30, len(chunk_content))]
+            return fallback
+
+    except Exception as e:
+        logger.error(f"Error extracting highlight keyphrase: {e}")
+        return chunk_content[: min(30, len(chunk_content))]

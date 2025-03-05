@@ -8,7 +8,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.models import DocumentDB
-from app.ingestion.process_utils.openai_utils import generate_query_match_explanation
+from app.ingestion.process_utils.openai_utils import (
+    extract_highlight_keyphrase,
+    generate_query_match_explanation,
+)
 from app.search.schemas import (
     DocumentMetadata,
     DocumentSearchResult,
@@ -262,18 +265,34 @@ async def hybrid_search(
         # Take top matches
         top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-        # Extract starting keyphrase for generic search
-        # For precision mode, explanations aren't needed
+        # Generate explanations and extract highlight keyphrases for generic search
+        # For precision mode, these aren't needed
         if not precision:
+            # Create tasks for both explanations and highlight keyphrases
             explanation_tasks = [
                 generate_query_match_explanation(
                     query_str, match["doc"].contextualized_chunk
                 )
                 for match in top_matches
             ]
-            explanations = await asyncio.gather(*explanation_tasks)
+
+            keyphrase_tasks = [
+                extract_highlight_keyphrase(
+                    query_str, match["doc"].contextualized_chunk
+                )
+                for match in top_matches
+            ]
+
+            # Run all tasks concurrently for better performance
+            all_results = await asyncio.gather(*explanation_tasks, *keyphrase_tasks)
+
+            # Split the results - first half are explanations, second half are
+            # keyphrases
+            explanations = all_results[: len(top_matches)]
+            keyphrases = all_results[len(top_matches) :]
         else:
             explanations = [None] * len(top_matches)  # Placeholder if in precision mode
+            keyphrases = [None] * len(top_matches)  # Placeholder if in precision mode
 
         # Group matches by document_id and build final results
         documents = {}
@@ -304,12 +323,15 @@ async def hybrid_search(
                     page_number=match["page_number"],
                     rank=match["rank"],
                     explanation=explanation,
-                    # Extract first 30 characters from chunk to use as starting
-                    # keyphrase for highlighting
+                    # Use the extracted keyphrase for intelligent highlighting
                     starting_keyphrase=(
-                        doc.contextualized_chunk[:30]
-                        if doc.contextualized_chunk
-                        else ""
+                        keyphrases[i]
+                        if keyphrases[i]
+                        else (
+                            doc.contextualized_chunk[:30]
+                            if doc.contextualized_chunk
+                            else ""
+                        )
                     ),
                 )
                 documents[document_id]["matches"].append(matched_chunk)
