@@ -5,16 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-class SearchRequest(BaseModel):
-    """Schema for the search request parameters."""
-
-    query: str
-    precision: bool = False
-    country: Optional[str] = None
-    organization: Optional[str] = None
-    region: Optional[str] = None
-
-
+# Common schemas shared across search types
 class DocumentMetadata(BaseModel):
     """Schema for the document metadata."""
 
@@ -29,12 +20,53 @@ class DocumentMetadata(BaseModel):
     year: int
 
 
+# Base search request shared by both search types
+class BaseSearchRequest(BaseModel):
+    """Base schema for search request parameters."""
+
+    query: str
+    country: Optional[str] = None
+    organization: Optional[str] = None
+    region: Optional[str] = None
+
+
+# Generic search schemas
+class GenericSearchRequest(BaseSearchRequest):
+    """Schema for generic search request parameters."""
+
+    pass
+
+
 class MatchedChunk(BaseModel):
     """Schema for a matched chunk in a document."""
 
     page_number: int
     rank: int
-    explanation: Optional[str] = None  # Explanation remains
+    explanation: str
+    starting_keyphrase: str = ""  # Text to highlight in the PDF
+
+
+class GenericDocumentSearchResult(BaseModel):
+    """Schema for a generic search document result."""
+
+    metadata: DocumentMetadata
+    matches: List[MatchedChunk]
+    num_matches: int
+
+
+class GenericSearchResponse(BaseModel):
+    """Schema for the generic search response."""
+
+    query: str
+    results: List[GenericDocumentSearchResult]
+    message: Optional[str] = None
+
+
+# Precision search schemas
+class PrecisionSearchRequest(BaseSearchRequest):
+    """Schema for precision search request parameters."""
+
+    pass
 
 
 class MatchedQAPair(BaseModel):
@@ -46,16 +78,39 @@ class MatchedQAPair(BaseModel):
     rank: int
 
 
+class PrecisionDocumentSearchResult(BaseModel):
+    """Schema for a precision search document result."""
+
+    metadata: DocumentMetadata
+    matches: List[MatchedQAPair]
+    num_matches: int
+
+
+class PrecisionSearchResponse(BaseModel):
+    """Schema for the precision search response."""
+
+    query: str
+    results: List[PrecisionDocumentSearchResult]
+    message: Optional[str] = None
+
+
+# Legacy schemas for backward compatibility (to be removed once migration is complete)
+class SearchRequest(BaseSearchRequest):
+    """Legacy schema for the search request parameters."""
+
+    precision: bool = False
+
+
 class DocumentSearchResult(BaseModel):
-    """Schema for a document search result."""
+    """Legacy schema for a document search result."""
 
     metadata: DocumentMetadata
     matches: List  # List of MatchedChunk or MatchedQAPair
-    num_matches: Optional[int] = None  # Only used in precision search
+    num_matches: Optional[int] = None
 
 
 class SearchResponse(BaseModel):
-    """Schema for the search response."""
+    """Legacy schema for the search response."""
 
     query: str
     results: List[DocumentSearchResult]

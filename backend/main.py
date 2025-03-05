@@ -4,7 +4,6 @@ import sys
 from types import FrameType
 from typing import Any, Dict, Optional
 
-from app import create_app
 from app.config import BACKEND_ROOT_PATH
 from gunicorn.app.base import BaseApplication
 from gunicorn.glogging import Logger
@@ -115,17 +114,15 @@ if __name__ == "__main__":
 
     logger.configure(handlers=[{"sink": sys.stdout, "serialize": JSON_LOGS}])
 
-    # Instantiate your FastAPI app
-    app = create_app()
+    # Use uvicorn directly with auto-reload
+    import uvicorn
 
-    options = {
-        "bind": "0.0.0.0",
-        "workers": WORKERS,
-        "timeout": 120,
-        "accesslog": "-",
-        "errorlog": "-",
-        "worker_class": "__main__.Worker",  # use import path as string
-        "logger_class": StubbedGunicornLogger,
-    }
-
-    StandaloneApplication(app, options).run()
+    logger.info("Starting server with auto-reload enabled")
+    uvicorn.run(
+        "app:create_app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        factory=True,
+        log_level="info",
+    )

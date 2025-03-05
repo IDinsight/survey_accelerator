@@ -148,7 +148,20 @@ async def hybrid_search(
     organization: Optional[str] = None,
     region: Optional[str] = None,
 ) -> List[DocumentSearchResult]:
-    """Hybrid search combining semantic and keyword search with reranking."""
+    """
+    Hybrid search combining semantic and keyword search with reranking.
+
+    Args:
+        session: Database session
+        query_str: Search query string
+        precision: If True, search QA pairs instead of chunks
+        country: Optional filter by country
+        organization: Optional filter by organization
+        region: Optional filter by region
+
+    Returns:
+        List of DocumentSearchResult objects
+    """
     try:
         # Embed the query
         embedding_response = await embed_query(query_str)
@@ -249,7 +262,8 @@ async def hybrid_search(
         # Take top matches
         top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-        # Explanation generation only if precision is disabled (non-precision search)
+        # Extract starting keyphrase for generic search
+        # For precision mode, explanations aren't needed
         if not precision:
             explanation_tasks = [
                 generate_query_match_explanation(
@@ -290,6 +304,13 @@ async def hybrid_search(
                     page_number=match["page_number"],
                     rank=match["rank"],
                     explanation=explanation,
+                    # Extract first 30 characters from chunk to use as starting
+                    # keyphrase for highlighting
+                    starting_keyphrase=(
+                        doc.contextualized_chunk[:30]
+                        if doc.contextualized_chunk
+                        else ""
+                    ),
                 )
                 documents[document_id]["matches"].append(matched_chunk)
 

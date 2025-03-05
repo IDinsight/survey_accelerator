@@ -50,7 +50,7 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
 
     # Limit to 15 records for development
     missing_records = (
-        missing_records[:20] if len(missing_records) > 15 else missing_records
+        missing_records[:5] if len(missing_records) > 5 else missing_records
     )
 
     logger.info(f"Found {len(missing_records)} records to process")

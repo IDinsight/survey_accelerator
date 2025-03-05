@@ -4,7 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import authenticate_key
 from app.database import get_async_session
 from app.search.models import log_search
-from app.search.schemas import SearchRequest, SearchResponse
+from app.search.schemas import (
+    GenericSearchRequest,
+    GenericSearchResponse,
+    PrecisionSearchRequest,
+    PrecisionSearchResponse,
+    SearchRequest,
+    SearchResponse,
+)
 from app.search.utils import hybrid_search
 from app.utils import setup_logger
 
@@ -22,19 +29,134 @@ TAG_METADATA = {
 }
 
 
-@router.post("/", response_model=SearchResponse)
-async def search_documents(
-    request: SearchRequest,
+@router.post("/generic", response_model=GenericSearchResponse)
+async def search_generic(
+    request: GenericSearchRequest,
     session: AsyncSession = Depends(get_async_session),
-) -> SearchResponse:
-    """Search for documents based on the provided query."""
+) -> GenericSearchResponse:
+    """
+    Search for document chunks based on the provided query.
+    Returns chunks with context and explanation.
+    """
     try:
         if not request.query.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
             )
 
-        # Perform search without passing `top_k`, as it’s managed internally
+        # Call hybrid_search with precision=False
+        results = await hybrid_search(
+            session,
+            query_str=request.query,
+            precision=False,
+            country=request.country,
+            organization=request.organization,
+            region=request.region,
+        )
+
+        if not results:
+            return GenericSearchResponse(
+                query=request.query, results=[], message="No matching documents found."
+            )
+
+        # Convert the DocumentSearchResult objects to GenericDocumentSearchResult
+        # objects
+        generic_results = [
+            {
+                "metadata": result.metadata,
+                "matches": result.matches,
+                "num_matches": result.num_matches,
+            }
+            for result in results
+        ]
+
+        response = GenericSearchResponse(
+            query=request.query,
+            results=generic_results,
+            message="Search completed successfully.",
+        )
+
+        # Log the search
+        await log_search(session, request.query, response.model_dump_json(), False)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error during generic search for query '{request.query}': {e}")
+        raise e
+
+
+@router.post("/precision", response_model=PrecisionSearchResponse)
+async def search_precision(
+    request: PrecisionSearchRequest,
+    session: AsyncSession = Depends(get_async_session),
+) -> PrecisionSearchResponse:
+    """
+    Search for specific QA pairs based on the provided query.
+    Returns matched questions and answers.
+    """
+    try:
+        if not request.query.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
+            )
+
+        # Call hybrid_search with precision=True
+        results = await hybrid_search(
+            session,
+            query_str=request.query,
+            precision=True,
+            country=request.country,
+            organization=request.organization,
+            region=request.region,
+        )
+
+        if not results:
+            return PrecisionSearchResponse(
+                query=request.query, results=[], message="No matching documents found."
+            )
+
+        # Convert the DocumentSearchResult objects to PrecisionDocumentSearchResult
+        # objects
+        precision_results = [
+            {
+                "metadata": result.metadata,
+                "matches": result.matches,
+                "num_matches": result.num_matches,
+            }
+            for result in results
+        ]
+
+        response = PrecisionSearchResponse(
+            query=request.query,
+            results=precision_results,
+            message="Search completed successfully.",
+        )
+
+        # Log the search
+        await log_search(session, request.query, response.model_dump_json(), True)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error during precision search for query '{request.query}': {e}")
+        raise e
+
+
+# Legacy endpoint for backward compatibility
+@router.post("/", response_model=SearchResponse)
+async def search_documents(
+    request: SearchRequest,
+    session: AsyncSession = Depends(get_async_session),
+) -> SearchResponse:
+    """Search for documents based on the provided query (legacy endpoint)."""
+    try:
+        if not request.query.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
+            )
+
+        # Perform search without passing `top_k`, as it's managed internally
         results = await hybrid_search(
             session,
             query_str=request.query,
