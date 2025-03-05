@@ -32,7 +32,7 @@ MAX_CONCURRENT_PROCESSING = 5  # Processing is CPU intensive
 
 
 @router.post("/airtable/refresh", response_model=AirtableIngestionResponse)
-async def airtable_refresh_and_ingest():
+async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     """
     Refresh the list of documents by comparing Airtable 'ID' fields with database
     'document_id's. Automatically ingest the missing documents.
