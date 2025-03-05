@@ -89,7 +89,6 @@ class DocumentDB(Base):
     countries: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
     organizations: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
     regions: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     drive_link: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     date_added: Mapped[Optional[datetime]] = mapped_column(
@@ -108,8 +107,8 @@ async def save_document_to_db(
     asession: AsyncSession,
     metadata: dict,
     pdf_url: str,
-    summary: str = None,
-    title: str = None,
+    summary: str,
+    title: str,
     document_id: int,
 ) -> None:
     """
@@ -127,7 +126,6 @@ async def save_document_to_db(
         countries = metadata.get("Countries", [])
         organizations = metadata.get("Organization(s)", [])
         regions = metadata.get("Region(s)", [])
-        notes = metadata.get("Notes", "")
         drive_link = metadata.get("Drive link", "")
         year = metadata.get("Year", None)
         document_id = metadata.get("ID", None)
@@ -152,9 +150,8 @@ async def save_document_to_db(
                 countries=countries,
                 organizations=organizations,
                 regions=regions,
-                notes=notes,
                 drive_link=drive_link,
-                year=metadata.get("Year"),
+                year=year,
                 date_added=date_added,
                 document_id=document_id,  # Using the document_id passed to the function
                 pdf_url=pdf_url,
@@ -171,7 +168,7 @@ async def save_document_to_db(
                 extracted_qa_pairs = []
 
             qa_pairs = []
-            for qa_idx, qa_pair in enumerate(extracted_qa_pairs):
+            for _, qa_pair in enumerate(extracted_qa_pairs):
                 try:
                     question = qa_pair.get("question", "")
                     answers = qa_pair.get("answers", [])
@@ -220,13 +217,11 @@ async def save_single_document(metadata: Dict[str, Any]) -> bool:
                 file_name=metadata["file_name"],
                 processed_pages=metadata["processed_pages"],
                 asession=asession,
-                metadata=metadata.get("fields", {}),
-                pdf_url=metadata.get("pdf_url", ""),  # Use empty string as fallback
-                title=metadata.get("survey_name"),
-                summary=metadata.get("summary"),
-                document_id=metadata.get(
-                    "document_id"
-                ),  # Pass document_id from metadata
+                metadata=metadata["fields"],
+                pdf_url=metadata["pdf_url"],
+                title=metadata["survey_name"],
+                summary=metadata["summary"],
+                document_id=metadata["document_id"],
             )
             logger.info(
                 f"File '{metadata['file_name']}' processed and saved successfully."
