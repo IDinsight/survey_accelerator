@@ -74,11 +74,20 @@ const AdvancedSearchEngine: React.FC = () => {
     setSelectedCardId(result.metadata.id);
     setCurrentPageNumber(null); // Reset the page number when a new PDF is selected
     setSelectedHighlightedId(null); // Clear previous highlights
+    setHighlightText(''); // Clear highlight text
 
     // Set default to top match for the newly selected card
     if (result.matches.length > 0) {
       setCurrentPageNumber(result.matches[0].page_number);
       setSelectedHighlightedId(result.matches[0].rank);
+
+      // Set the highlight text based on the match type
+      const topMatch = result.matches[0];
+      if (!precisionSearch && 'starting_keyphrase' in topMatch) {
+        setHighlightText((topMatch as MatchedChunk).starting_keyphrase || '');
+      } else if (precisionSearch && 'question' in topMatch) {
+        setHighlightText((topMatch as MatchedQAPair).question || '');
+      }
     }
   };
 
@@ -87,17 +96,22 @@ const AdvancedSearchEngine: React.FC = () => {
     setCurrentPageNumber(pageNumber);
     setSelectedHighlightedId(matchId);
 
-    // Find the selected match and extract the starting_keyphrase for highlighting
+    // Find the selected match and extract the highlight text
     if (selectedCardId) {
       const selectedResult = searchResults.find(res => res.metadata.id === selectedCardId);
       if (selectedResult) {
         const selectedMatch = selectedResult.matches.find(match => match.rank === matchId);
         if (selectedMatch) {
-          // Check if it's a generic search result with a starting_keyphrase
+          // For generic search, use the starting_keyphrase for highlighting
           if (!precisionSearch && 'starting_keyphrase' in selectedMatch) {
             setHighlightText((selectedMatch as MatchedChunk).starting_keyphrase || '');
-          } else {
-            setHighlightText(''); // Clear highlight for precision search
+          }
+          // For precision search, use the question text for highlighting
+          else if (precisionSearch && 'question' in selectedMatch) {
+            setHighlightText((selectedMatch as MatchedQAPair).question || '');
+          }
+          else {
+            setHighlightText(''); // Fall back to clearing highlight
           }
         }
       }
@@ -183,7 +197,7 @@ const AdvancedSearchEngine: React.FC = () => {
         {/* PDF Viewer */}
         <div className="flex-grow min-h-0 overflow-hidden">
           <PDFViewer
-            key={`${selectedPDF}-${currentPageNumber}-${highlightText}`} // Unique key to ensure re-render
+            key={`${selectedPDF}`} // Only re-render when the PDF URL changes (new document)
             pdfUrl={selectedPDF || ''}
             pageNumber={currentPageNumber || undefined}
             highlightText={highlightText}
