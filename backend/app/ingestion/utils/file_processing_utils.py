@@ -170,7 +170,9 @@ async def process_file(
             continue
 
         # Combine metadata, context summary, and chunk text
-        contextualized_chunk = f"{metadata_section}{chunk_summary}\n\n{page_text}"
+        contextualized_chunk = f"""METADATA: {metadata_section}
+        CONTEXT: {chunk_summary}
+        RAW TEXT: {page_text}"""
 
         # Create the task for embedding generation
         embedding_task = asyncio.to_thread(create_embedding, contextualized_chunk)

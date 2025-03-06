@@ -145,29 +145,63 @@ async def extract_highlight_keyphrase(query: str, chunk_content: str) -> str:
 
     Args:
         query: The search query
-        chunk_content: The text chunk content
+        chunk_content: The text chunk content with METADATA, CONTEXT, and RAW TEXT sections
 
     Returns:
         A verbatim text snippet (5-15 words) from the chunk that can be used to locate
         the relevant part of the PDF for highlighting
     """
+    # Extract the RAW TEXT section from the chunk_content if it's in the new format
+    raw_text = ""
+    context_info = ""
+
+    # Check if the chunk has the new structured format with METADATA, CONTEXT, and RAW TEXT
+    if "METADATA:" in chunk_content:
+        # Try to extract the RAW TEXT part
+        parts = chunk_content.split("RAW TEXT:")
+        if len(parts) > 1:
+            raw_text = parts[1].strip()
+
+        # Extract CONTEXT section if available for reasoning
+        context_parts = chunk_content.split("CONTEXT:")
+        if len(context_parts) > 1:
+            context_section = (
+                context_parts[1].split("RAW TEXT:")[0]
+                if "RAW TEXT:" in context_parts[1]
+                else context_parts[1]
+            )
+            context_info = context_section.strip()
+
+    # If we couldn't find the RAW TEXT section or it's empty, use the original chunk
+    if not raw_text:
+        logger.warning("RAW TEXT section not found or empty, using full chunk content")
+        raw_text = chunk_content
+
     prompt = f"""
-    Given the search query: "{query}"
+    TASK: Extract EXACTLY 2-3 consecutive words from the RAW TEXT that appear verbatim and would be useful to highlight in the document.
 
-    And this document chunk:
-    "{chunk_content}"
+    CRITICAL REQUIREMENTS:
+    1. The words MUST EXIST WORD-FOR-WORD in the RAW TEXT - verify this before responding
+    2. Extract EXACTLY as written - same capitalization, spacing, and punctuation
+    3. Choose words that relate directly to the user query
+    4. Check that your selected words appear CONSECUTIVELY and UNALTERED in the RAW TEXT
+    5. Return ONLY the extracted words with no quotes or additional text
 
-    Find and extract a VERBATIM sequence of 5-15 consecutive words from the chunk that:
-    1. Best relates to the search query
-    2. Would be most useful for highlighting in a PDF
-    3. Is EXACTLY as it appears in the chunk - do not modify ANY words or punctuation
+    IF NO EXACT MATCH: If you cannot find ANY 2-3 word sequence that appears verbatim in the RAW TEXT and relates to the query, respond only with "NO_MATCH_FOUND"
 
-    Only return the extracted text snippet with no additional explanation, quotes,
-    or formatting. The text MUST appear EXACTLY as written in the original chunk,
-    preserving all capitalization
-    and spacing.
+    USER QUERY: "{query}"
+
+    SELECTION CONTEXT:
+    {context_info}
+
+    RAW TEXT TO SEARCH IN:
+    {raw_text}
+
+    YOUR RESPONSE MUST BE EITHER:
+    - EXACTLY 2-3 consecutive words that appear verbatim in the RAW TEXT
+    - OR "NO_MATCH_FOUND" if no suitable text exists
     """
-
+    logger.info(raw_text)
     try:
         response = await async_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -178,17 +212,73 @@ async def extract_highlight_keyphrase(query: str, chunk_content: str) -> str:
             temperature=0,
         )
         keyphrase = response.choices[0].message.content.strip()
-
-        # Verify the keyphrase exists in the chunk content
-        if keyphrase and keyphrase in chunk_content:
-            return keyphrase
-        else:
-            # If not found, fall back to first 30 characters or a substring that does
-            # exist
-            logger.warning(f"Extracted keyphrase not found in chunk: {keyphrase}")
-            fallback = chunk_content[: min(30, len(chunk_content))]
+        logger.info(keyphrase)
+        # Handle the explicit no match case
+        if keyphrase == "NO_MATCH_FOUND":
+            logger.warning("No suitable match found for highlighting")
+            fallback = raw_text[: min(30, len(raw_text))]
             return fallback
+
+        # Verify the keyphrase exists in the raw text content
+        if keyphrase and keyphrase in raw_text:
+            # Additional verification to ensure it's a proper substring with meaningful length
+            if len(keyphrase.strip()) >= 2:
+                logger.info(f"Successfully found valid keyphrase: '{keyphrase}'")
+                return keyphrase
+            else:
+                logger.warning(f"Keyphrase too short: '{keyphrase}'")
+        else:
+            logger.warning(
+                f"Extracted keyphrase not found verbatim in chunk: '{keyphrase}'"
+            )
+
+        # If we get here, the keyphrase was invalid or not found
+
+        # Try to find simple but distinctive words from the query in the text
+        query_words = [word.lower() for word in query.split() if len(word) > 3]
+        for word in query_words:
+            # Find the word in the raw text (case insensitive)
+            raw_text_lower = raw_text.lower()
+            if word in raw_text_lower:
+                # Find the actual position in the original text
+                start_pos = raw_text_lower.find(word)
+
+                # Extract a context window around the found word (find a space before and after)
+                # Look for a space before
+                context_start = raw_text.rfind(" ", max(0, start_pos - 30), start_pos)
+                if context_start == -1:
+                    context_start = max(0, start_pos - 10)
+
+                # Look for a space after
+                context_end = raw_text.find(
+                    " ",
+                    start_pos + len(word),
+                    min(len(raw_text), start_pos + len(word) + 30),
+                )
+                if context_end == -1:
+                    context_end = min(len(raw_text), start_pos + len(word) + 10)
+
+                # Extract the context with the exact casing from the original text
+                extracted_text = raw_text[context_start:context_end].strip()
+                if len(extracted_text) >= 2:
+                    logger.info(
+                        f"Found fallback text based on query word '{word}': '{extracted_text}'"
+                    )
+                    return extracted_text
+
+        # Last resort fallback - try to get a meaningful chunk from the beginning
+        # Look for the first period or sentence boundary within the first 50 chars
+        first_period = raw_text.find(".", 0, 50)
+        if first_period != -1 and first_period > 5:
+            fallback = raw_text[: first_period + 1].strip()
+            logger.info(f"Using first sentence as fallback: '{fallback}'")
+            return fallback
+
+        # Absolute last resort - just the first few characters
+        fallback = raw_text[: min(30, len(raw_text))].strip()
+        logger.info(f"Using first 30 chars as fallback: '{fallback}'")
+        return fallback
 
     except Exception as e:
         logger.error(f"Error extracting highlight keyphrase: {e}")
-        return chunk_content[: min(30, len(chunk_content))]
+        return raw_text[: min(30, len(raw_text))]
