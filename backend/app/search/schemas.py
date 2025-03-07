@@ -5,16 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-class SearchRequest(BaseModel):
-    """Schema for the search request parameters."""
-
-    query: str
-    precision: bool = False
-    country: Optional[str] = None
-    organization: Optional[str] = None
-    region: Optional[str] = None
-
-
+# Common schemas shared across search types
 class DocumentMetadata(BaseModel):
     """Schema for the document metadata."""
 
@@ -23,10 +14,28 @@ class DocumentMetadata(BaseModel):
     title: str
     summary: str
     pdf_url: str
+    highlighted_pdf_url: Optional[str] = None  # URL to the pre-highlighted PDF
     countries: List[str]
     organizations: List[str]
     regions: List[str]
     year: int
+
+
+# Base search request shared by both search types
+class BaseSearchRequest(BaseModel):
+    """Base schema for search request parameters."""
+
+    query: str
+    country: Optional[str] = None
+    organization: Optional[str] = None
+    region: Optional[str] = None
+
+
+# Generic search schemas
+class GenericSearchRequest(BaseSearchRequest):
+    """Schema for generic search request parameters."""
+
+    pass
 
 
 class MatchedChunk(BaseModel):
@@ -34,28 +43,36 @@ class MatchedChunk(BaseModel):
 
     page_number: int
     rank: int
-    explanation: Optional[str] = None  # Explanation remains
+    explanation: str
+    starting_keyphrase: str = ""  # Text to highlight in the PDF
 
 
-class MatchedQAPair(BaseModel):
-    """Schema for a matched QA pair in a document."""
+class GenericDocumentSearchResult(BaseModel):
+    """Schema for a generic search document result."""
 
-    page_number: int
-    question: str
-    answer: str
-    rank: int
+    metadata: DocumentMetadata
+    matches: List[MatchedChunk]
+    num_matches: int
+
+
+class GenericSearchResponse(BaseModel):
+    """Schema for the generic search response."""
+
+    query: str
+    results: List[GenericDocumentSearchResult]
+    message: Optional[str] = None
 
 
 class DocumentSearchResult(BaseModel):
-    """Schema for a document search result."""
+    """Legacy schema for a document search result."""
 
     metadata: DocumentMetadata
     matches: List  # List of MatchedChunk or MatchedQAPair
-    num_matches: Optional[int] = None  # Only used in precision search
+    num_matches: Optional[int] = None
 
 
 class SearchResponse(BaseModel):
-    """Schema for the search response."""
+    """Legacy schema for the search response."""
 
     query: str
     results: List[DocumentSearchResult]

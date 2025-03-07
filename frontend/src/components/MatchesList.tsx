@@ -3,7 +3,7 @@ import { MatchedChunk, MatchedQAPair } from '../interfaces';
 
 interface MatchesListProps {
   matches: (MatchedChunk | MatchedQAPair)[];
-  onMatchClick: (pageNumber: number) => void;
+  onMatchClick: (pageNumber: number, matchId: number) => void;
 }
 
 // Type guard to check if a match is of type MatchedChunk
@@ -36,7 +36,7 @@ const MatchesList: React.FC<MatchesListProps> = ({
           <li key={index} className="relative">
             <button
               className="text-sm text-left w-full bg-blue-100 hover:bg-blue-200 p-2 rounded"
-              onClick={() => onMatchClick(match.page_number)}
+              onClick={() => onMatchClick(match.page_number, match.rank)}
             >
               <strong>
                 Rank {match.rank}, Page {match.page_number}:

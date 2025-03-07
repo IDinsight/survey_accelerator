@@ -5,23 +5,21 @@ const authToken = process.env.NEXT_PUBLIC_BACKEND_PW || 'kk';
 
 export const searchDocuments = async (
   query: string,
-  top_k: number,
-  precision: boolean,
   country: string,
   organization: string,
   region: string
 ) => {
   try {
-    // Make the POST request to the search endpoint with headers and data
+    const endpoint = '/search/generic';
+
+    // Make the POST request to the appropriate search endpoint
     const response = await axios.post(
-      `${backendUrl}/search/`,
+      `${backendUrl}${endpoint}`,
       {
         query,
-        top_k,
-        precision,
-        country,
-        organization,
-        region,
+        country: country || undefined,
+        organization: organization || undefined,
+        region: region || undefined,
       },
       {
         headers: {
@@ -37,5 +35,71 @@ export const searchDocuments = async (
   } catch (error) {
     console.error('Error fetching search results:', error);
     throw new Error('Search request timed out or failed. Please try again.');
+  }
+};
+
+/**
+ * Performs a generic search that returns document chunks with context
+ */
+export const searchGeneric = async (
+  query: string,
+  country?: string,
+  organization?: string,
+  region?: string
+) => {
+  try {
+    const response = await axios.post(
+      `${backendUrl}/search/generic`,
+      {
+        query,
+        country: country || undefined,
+        organization: organization || undefined,
+        region: region || undefined,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 25000,
+      }
+    );
+
+    return response.data.results || [];
+  } catch (error) {
+    console.error('Error fetching generic search results:', error);
+    throw new Error('Search request timed out or failed. Please try again.');
+  }
+};
+
+/**
+ * Gets a highlighted version of a PDF with the search term pre-highlighted.
+ * This calls the backend to process the PDF and add highlights.
+ */
+export const getHighlightedPdf = async (
+  pdfUrl: string, 
+  searchTerm: string
+): Promise<string> => {
+  try {
+    const response = await axios.get(
+      `${backendUrl}/api/highlight-pdf`,
+      {
+        params: {
+          pdf_url: pdfUrl,
+          search_term: searchTerm
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // Allow 30 seconds for PDF processing
+      }
+    );
+    
+    // The response should contain the URL to the highlighted PDF
+    return response.data.highlighted_pdf_url;
+  } catch (error) {
+    console.error('Error getting highlighted PDF:', error);
+    throw new Error('Failed to get highlighted PDF. Please try again.');
   }
 };

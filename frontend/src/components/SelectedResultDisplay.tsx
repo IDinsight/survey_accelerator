@@ -2,22 +2,20 @@
 
 import React from 'react';
 import MatchesList from './MatchesList';
-import { DocumentSearchResult, MatchedQAPair } from '../interfaces';
+import { DocumentSearchResult } from '../interfaces';
 
 interface SelectedResultDisplayProps {
   selectedResult: DocumentSearchResult;
-  onMatchClick: (pageNumber: number) => void;
+  onMatchClick: (pageNumber: number, matchId: number) => void;
 }
 
 const SelectedResultDisplay: React.FC<SelectedResultDisplayProps> = ({
   selectedResult,
   onMatchClick,
 }) => {
-  const matches = selectedResult.matches as MatchedQAPair[]; // Type assertion based on backend response
-
   return (
     <MatchesList
-      matches={matches}
+      matches={selectedResult.matches}
       onMatchClick={onMatchClick}
     />
   );

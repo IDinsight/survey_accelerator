@@ -19,7 +19,6 @@ class SearchLogDB(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    precision: Mapped[bool] = mapped_column(Boolean, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
@@ -28,14 +27,13 @@ class SearchLogDB(Base):
     def __repr__(self) -> str:
         """Return a string representation of the object."""
         return f"""<SearchLog(id={self.id}, query='{self.query}', \
-            timestamp='{self.timestamp}', precision={self.precision})>"""
+            timestamp='{self.timestamp}')>"""
 
 
 async def log_search(
     asession: AsyncSession,
     query: str,
     search_response: dict,
-    precision: bool,
 ) -> None:
     """
     Log a search performed on the document database.
@@ -43,13 +41,12 @@ async def log_search(
     try:
         search_log = SearchLogDB(
             query=query,
-            precision=precision,
             timestamp=datetime.now(timezone.utc),
             search_response=search_response,
         )
         asession.add(search_log)
         await asession.commit()
-        logger.info(f"Logged search for query: '{query}' with precision={precision}")
+        logger.info(f"Logged search for query: '{query}'")
     except Exception as e:
         logger.error(f"Failed to log search for query: '{query}': {e}")
         await asession.rollback()

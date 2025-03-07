@@ -6,7 +6,6 @@ import tiktoken
 
 from app.ingestion.process_utils.embedding_utils import create_embedding
 from app.ingestion.process_utils.openai_utils import (
-    extract_question_answer_from_page,
     generate_contextual_summary,
 )
 from app.utils import setup_logger
@@ -170,15 +169,13 @@ async def process_file(
             continue
 
         # Combine metadata, context summary, and chunk text
-        contextualized_chunk = f"{metadata_section}{chunk_summary}\n\n{page_text}"
+        contextualized_chunk = f"""METADATA: {metadata_section}
+        CONTEXT: {chunk_summary}
+        RAW TEXT: {page_text}"""
 
         # Create the task for embedding generation
         embedding_task = asyncio.to_thread(create_embedding, contextualized_chunk)
         embedding_tasks.append((page_num, embedding_task))
-
-        # Create the task for question-answer extraction
-        qa_task = extract_question_answer_from_page(page_text)
-        qa_extraction_tasks.append((page_num, qa_task))
 
         # Initialize processed page entry
         processed_pages.append(
@@ -195,10 +192,6 @@ async def process_file(
         *[task for _, task in embedding_tasks], return_exceptions=True
     )
 
-    # Run QA extraction tasks concurrently
-    qa_results = await asyncio.gather(
-        *[task for _, task in qa_extraction_tasks], return_exceptions=True
-    )
 
     # Associate embeddings and QA pairs with processed pages
     for i, page in enumerate(processed_pages):
@@ -214,17 +207,6 @@ async def process_file(
             page["embedding"] = None
         else:
             page["embedding"] = embedding_result
-
-        # Handle QA pairs
-        qa_result = qa_results[i]
-        if not isinstance(qa_result, list):
-            logger.error(
-                f"Extracted QA pairs on page {page_num + 1} is not a list. "
-                f"Skipping QA pairs for this page."
-            )
-            page["extracted_question_answers"] = []
-        else:
-            page["extracted_question_answers"] = qa_result
 
     return processed_pages
 

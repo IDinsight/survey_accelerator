@@ -28,20 +28,7 @@ logger = setup_logger()
 MAX_CONCURRENT_DB_TASKS = 5
 
 
-class QAPairDB(Base):
-    """ORM for managing question-answer pairs associated with each document."""
-
-    __tablename__ = "qa_pairs"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    document_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
-    )
-    question: Mapped[str] = mapped_column(Text, nullable=False)
-    answer: Mapped[str] = mapped_column(Text, nullable=False)
-
-    # Define relationship back to DocumentDB
-    document = relationship("DocumentDB", back_populates="qa_pairs")
+# QA pairs functionality has been removed
 
 
 class DocumentDB(Base):
@@ -95,9 +82,6 @@ class DocumentDB(Base):
         DateTime(timezone=True), nullable=True
     )
     document_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
-    qa_pairs = relationship(
-        "QAPairDB", back_populates="document", cascade="all, delete-orphan"
-    )
 
 
 async def save_document_to_db(
@@ -159,37 +143,7 @@ async def save_document_to_db(
                 title=title,
             )
 
-            # Create QAPairDB instances and associate them with the document
-            extracted_qa_pairs = page.get("extracted_question_answers", [])
-            if not isinstance(extracted_qa_pairs, list):
-                logger.warning(
-                    f"extracted_question_answers is not a list on page {idx + 1}."
-                )
-                extracted_qa_pairs = []
-
-            qa_pairs = []
-            for _, qa_pair in enumerate(extracted_qa_pairs):
-                try:
-                    question = qa_pair.get("question", "")
-                    answers = qa_pair.get("answers", [])
-
-                    # Ensure answers is a list
-                    if not isinstance(answers, list):
-                        answers = [answers]
-
-                    # Convert answers list to a string
-                    answer_text = ", ".join(answers)
-
-                    qa_pair_instance = QAPairDB(
-                        question=question,
-                        answer=answer_text,
-                    )
-
-                    qa_pairs.append(qa_pair_instance)
-                except Exception as e:
-                    logger.error(f"Error processing QA pair on page {idx + 1}: {e}")
-
-            document.qa_pairs = qa_pairs
+            # QA pair extraction has been removed
 
             # Add document to session and commit immediately
             asession.add(document)

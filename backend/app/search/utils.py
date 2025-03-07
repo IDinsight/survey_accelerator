@@ -8,12 +8,14 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.models import DocumentDB
-from app.ingestion.process_utils.openai_utils import generate_query_match_explanation
+from app.search.openai_utils import (
+    extract_highlight_keyphrase,
+    generate_query_match_explanation,
+)
 from app.search.schemas import (
     DocumentMetadata,
     DocumentSearchResult,
     MatchedChunk,
-    MatchedQAPair,
 )
 from app.utils import setup_logger
 
@@ -143,12 +145,23 @@ async def perform_keyword_search(
 async def hybrid_search(
     session: AsyncSession,
     query_str: str,
-    precision: bool = False,
     country: Optional[str] = None,
     organization: Optional[str] = None,
     region: Optional[str] = None,
 ) -> List[DocumentSearchResult]:
-    """Hybrid search combining semantic and keyword search with reranking."""
+    """
+    Hybrid search combining semantic and keyword search with reranking.
+
+    Args:
+        session: Database session
+        query_str: Search query string
+        country: Optional filter by country
+        organization: Optional filter by organization
+        region: Optional filter by region
+
+    Returns:
+        List of DocumentSearchResult objects
+    """
     try:
         # Embed the query
         embedding_response = await embed_query(query_str)
@@ -183,31 +196,16 @@ async def hybrid_search(
         texts = []
         match_info = []
 
-        if precision:
-            # For precision search, collect QA pairs
-            for doc, _score in combined_results:
-                await session.refresh(doc, ["qa_pairs"])
-                for qa_pair in doc.qa_pairs:
-                    text = f"Question: {qa_pair.question} Answer: {qa_pair.answer}"
-                    texts.append(text)
-                    match_info.append(
-                        {
-                            "doc": doc,
-                            "qa_pair": qa_pair,
-                            "page_number": doc.page_number,
-                        }
-                    )
-        else:
-            # For standard search, collect chunks
-            for doc, _score in combined_results:
-                text = doc.contextualized_chunk
-                texts.append(text)
-                match_info.append(
-                    {
-                        "doc": doc,
-                        "page_number": doc.page_number,
-                    }
-                )
+
+        for doc, _score in combined_results:
+            text = doc.contextualized_chunk
+            texts.append(text)
+            match_info.append(
+                {
+                    "doc": doc,
+                    "page_number": doc.page_number,
+                }
+            )
 
         if not texts:
             return []
@@ -227,39 +225,39 @@ async def hybrid_search(
             index = result.index
             info = match_info[index]
             doc = info["doc"]
-            if precision:
-                qa_pair = info["qa_pair"]
-                reranked_matches.append(
-                    {
-                        "doc": doc,
-                        "qa_pair": qa_pair,
-                        "page_number": info["page_number"],
-                        "rank": rank + 1,
-                    }
-                )
-            else:
-                reranked_matches.append(
-                    {
-                        "doc": doc,
-                        "page_number": info["page_number"],
-                        "rank": rank + 1,
-                    }
-                )
+            reranked_matches.append(
+                {
+                    "doc": doc,
+                    "page_number": info["page_number"],
+                    "rank": rank + 1,
+                }
+            )
 
         # Take top matches
         top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-        # Explanation generation only if precision is disabled (non-precision search)
-        if not precision:
-            explanation_tasks = [
-                generate_query_match_explanation(
-                    query_str, match["doc"].contextualized_chunk
-                )
-                for match in top_matches
-            ]
-            explanations = await asyncio.gather(*explanation_tasks)
-        else:
-            explanations = [None] * len(top_matches)  # Placeholder if in precision mode
+        # Generate explanations and extract highlight keyphrases
+        # Create tasks for both explanations and highlight keyphrases
+        explanation_tasks = [
+            generate_query_match_explanation(
+                query_str, match["doc"].contextualized_chunk
+            )
+            for match in top_matches
+        ]
+
+        keyphrase_tasks = [
+            extract_highlight_keyphrase(
+                query_str, match["doc"].contextualized_chunk
+            )
+            for match in top_matches
+        ]
+
+        # Run all tasks concurrently for better performance
+        all_results = await asyncio.gather(*explanation_tasks, *keyphrase_tasks)
+
+        # Split the results - first half are explanations, second half are keyphrases
+        explanations = all_results[: len(top_matches)]
+        keyphrases = all_results[len(top_matches) :]
 
         # Group matches by document_id and build final results
         documents = {}
@@ -272,26 +270,23 @@ async def hybrid_search(
                     "matches": [],
                     "best_rank": match["rank"],
                 }
-            explanation = explanations[i] if not precision else None
-            if precision:
-                matched_qas = MatchedQAPair(
-                    page_number=match["page_number"],
-                    question=match["qa_pair"].question,
-                    answer=(
-                        match["qa_pair"].answer
-                        if match["qa_pair"].answer is not None
-                        else "None extracted"
-                    ),
-                    rank=match["rank"],
-                )
-                documents[document_id]["matches"].append(matched_qas)
-            else:
-                matched_chunk = MatchedChunk(
-                    page_number=match["page_number"],
-                    rank=match["rank"],
-                    explanation=explanation,
-                )
-                documents[document_id]["matches"].append(matched_chunk)
+            explanation = explanations[i]
+            matched_chunk = MatchedChunk(
+                page_number=match["page_number"],
+                rank=match["rank"],
+                explanation=explanation,
+                # Use the extracted keyphrase for intelligent highlighting
+                starting_keyphrase=(
+                    keyphrases[i]
+                    if keyphrases[i]
+                    else (
+                        doc.contextualized_chunk[:30]
+                        if doc.contextualized_chunk
+                        else ""
+                    )
+                ),
+            )
+            documents[document_id]["matches"].append(matched_chunk)
 
             if match["rank"] < documents[document_id]["best_rank"]:
                 documents[document_id]["best_rank"] = match["rank"]
