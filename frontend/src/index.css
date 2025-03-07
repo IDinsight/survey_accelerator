@@ -18,3 +18,81 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* PDF.js viewer styles */
+.viewerContainer {
+  overflow: auto;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.pdfViewer {
+  position: relative;
+}
+
+.pdfViewer .textLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.pdfViewer .textLayer > span {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.pdfViewer .textLayer .highlight {
+  margin: -1px;
+  padding: 1px;
+  background-color: rgb(255, 255, 0);
+  border-radius: 4px;
+}
+
+.pdfViewer .textLayer .highlight.begin {
+  border-radius: 4px 0px 0px 4px;
+}
+
+.pdfViewer .textLayer .highlight.end {
+  border-radius: 0px 4px 4px 0px;
+}
+
+.pdfViewer .textLayer .highlight.middle {
+  border-radius: 0px;
+}
+
+.pdfViewer .textLayer .highlight.selected {
+  background-color: rgb(0, 100, 0);
+}
+
+.pdfViewer .textLayer ::-moz-selection {
+  background: rgb(0, 0, 255);
+}
+
+.pdfViewer .textLayer ::selection {
+  background: rgb(0, 0, 255);
+}
+
+.pdfViewer .canvasWrapper {
+  overflow: hidden;
+}
+
+.pdfViewer .page {
+  direction: ltr;
+  width: 816px;
+  height: 1056px;
+  margin: 1px auto -8px auto;
+  position: relative;
+  overflow: visible;
+  border: 9px solid transparent;
+  background-clip: content-box;
+  background-color: white;
+}

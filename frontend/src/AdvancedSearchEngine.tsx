@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import SearchResultCard from './components/SearchResultCard';
-import PDFViewer from './components/PDFViewer';
+import PDFJSSimpleViewer from './components/PDFJSSimpleViewer';
 import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
 import { DocumentSearchResult, MatchedChunk, MatchedQAPair } from './interfaces';
@@ -196,11 +196,11 @@ const AdvancedSearchEngine: React.FC = () => {
       <div className="flex flex-col flex-grow h-full overflow-hidden">
         {/* PDF Viewer */}
         <div className="flex-grow min-h-0 overflow-hidden">
-          <PDFViewer
+          <PDFJSSimpleViewer
             key={`${selectedPDF}`} // Only re-render when the PDF URL changes (new document)
             pdfUrl={selectedPDF || ''}
             pageNumber={currentPageNumber || undefined}
-            highlightText={highlightText}
+            searchText={highlightText}
           />
         </div>
 
