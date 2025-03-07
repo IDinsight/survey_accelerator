@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="pdfFrame" allowfullscreen></iframe>
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileUrl = urlParams.get('file');
+        const pageNum = urlParams.get('page');
+        
+        // Set up the iframe source
+        if (fileUrl) {
+            let viewerUrl = fileUrl;
+            if (pageNum) {
+                viewerUrl += `#page=${pageNum}`;
+            }
+            document.getElementById('pdfFrame').src = viewerUrl;
+        } else {
+            document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: No PDF file specified</div>';
+        }
+    </script>
+</body>
+</html>
