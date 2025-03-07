@@ -14,6 +14,7 @@ class DocumentMetadata(BaseModel):
     title: str
     summary: str
     pdf_url: str
+    highlighted_pdf_url: Optional[str] = None  # URL to the pre-highlighted PDF
     countries: List[str]
     organizations: List[str]
     regions: List[str]
@@ -60,45 +61,6 @@ class GenericSearchResponse(BaseModel):
     query: str
     results: List[GenericDocumentSearchResult]
     message: Optional[str] = None
-
-
-# Precision search schemas
-class PrecisionSearchRequest(BaseSearchRequest):
-    """Schema for precision search request parameters."""
-
-    pass
-
-
-class MatchedQAPair(BaseModel):
-    """Schema for a matched QA pair in a document."""
-
-    page_number: int
-    question: str
-    answer: str
-    rank: int
-
-
-class PrecisionDocumentSearchResult(BaseModel):
-    """Schema for a precision search document result."""
-
-    metadata: DocumentMetadata
-    matches: List[MatchedQAPair]
-    num_matches: int
-
-
-class PrecisionSearchResponse(BaseModel):
-    """Schema for the precision search response."""
-
-    query: str
-    results: List[PrecisionDocumentSearchResult]
-    message: Optional[str] = None
-
-
-# Legacy schemas for backward compatibility (to be removed once migration is complete)
-class SearchRequest(BaseSearchRequest):
-    """Legacy schema for the search request parameters."""
-
-    precision: bool = False
 
 
 class DocumentSearchResult(BaseModel):

@@ -6,6 +6,7 @@ export interface Metadata {
   title: string;
   summary: string;
   pdf_url: string;
+  highlighted_pdf_url?: string; // URL to the PDF with search term highlights already added
   countries: string[];
   organizations: string[];
   regions: string[];
@@ -43,11 +44,6 @@ export interface GenericDocumentSearchResult {
   num_matches: number;
 }
 
-export interface PrecisionDocumentSearchResult {
-  metadata: Metadata;
-  matches: MatchedQAPair[];
-  num_matches: number;
-}
 
 export type Match = MatchedChunk | MatchedQAPair;
 
@@ -55,11 +51,5 @@ export type Match = MatchedChunk | MatchedQAPair;
 export interface GenericSearchResponse {
   query: string;
   results: GenericDocumentSearchResult[];
-  message?: string;
-}
-
-export interface PrecisionSearchResponse {
-  query: string;
-  results: PrecisionDocumentSearchResult[];
   message?: string;
 }

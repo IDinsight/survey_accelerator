@@ -5,11 +5,10 @@ interface SearchResultCardProps {
   result: DocumentSearchResult;
   onClick: (result: DocumentSearchResult) => void;
   isSelected: boolean;
-  precisionSearch: boolean;
 }
 
-const SearchResultCard: FC<SearchResultCardProps> = ({ result, onClick, isSelected, precisionSearch }) => {
-  const matchType = precisionSearch ? 'Matches' : 'Matches';
+const SearchResultCard: FC<SearchResultCardProps> = ({ result, onClick, isSelected }) => {
+  const matchType = 'Matches';
 
   return (
     <div

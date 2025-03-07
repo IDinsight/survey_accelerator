@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import SearchResultCard from './components/SearchResultCard';
-import PDFJSSimpleViewer from './components/PDFJSSimpleViewer';
+import PDFViewer from './components/PDFViewer';
 import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
-import { DocumentSearchResult, MatchedChunk, MatchedQAPair } from './interfaces';
-import { FaSpinner } from 'react-icons/fa'; // Import an icon for a spinner
-
-
+import { DocumentSearchResult } from './interfaces';
+import { FaSpinner } from 'react-icons/fa';
 
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
@@ -15,17 +13,15 @@ const AdvancedSearchEngine: React.FC = () => {
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [currentPageNumber, setCurrentPageNumber] = useState<number | null>(null);
   const [searchCollapsed, setSearchCollapsed] = useState<boolean>(false);
-  const [precisionSearch, setPrecisionSearch] = useState<boolean>(false);
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null);
-  const [highlightText, setHighlightText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Handle search form submission
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true); // Set loading to true when search starts
-    setErrorMessage(null); // Clear any previous error messages
+    setLoading(true);
+    setErrorMessage(null);
     const formData = new FormData(event.currentTarget);
     const query = formData.get('search') as string;
     const country = formData.get('country') as string;
@@ -33,12 +29,19 @@ const AdvancedSearchEngine: React.FC = () => {
     const region = formData.get('region') as string;
 
     try {
-      const results = await searchDocuments(query, 10, precisionSearch, country, organization, region);
+      const results = await searchDocuments(query, country, organization, region);
       setSearchResults(results);
       setSearchCollapsed(true);
       if (results.length > 0) {
         const topResult = results[0];
-        setSelectedPDF(topResult.metadata.pdf_url ?? null);
+        
+        // Use the highlighted PDF URL if available
+        if (topResult.metadata.highlighted_pdf_url) {
+          setSelectedPDF(topResult.metadata.highlighted_pdf_url);
+        } else {
+          setSelectedPDF(topResult.metadata.pdf_url ?? null);
+        }
+        
         setSelectedCardId(topResult.metadata.id);
         if (topResult.matches.length > 0) {
           setCurrentPageNumber(topResult.matches[0].page_number);
@@ -47,12 +50,12 @@ const AdvancedSearchEngine: React.FC = () => {
       }
     } catch (error) {
       if (error instanceof Error) {
-        setErrorMessage(error.message); // Set the error message if request fails
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('An unknown error occurred.');
       }
     } finally {
-      setLoading(false); // Set loading to false once the request is complete
+      setLoading(false);
     }
   };
 
@@ -70,24 +73,24 @@ const AdvancedSearchEngine: React.FC = () => {
 
   // Handle card click to display PDF and matches
   const handleCardClick = (result: DocumentSearchResult) => {
-    setSelectedPDF(result.metadata.pdf_url ?? null);
+    // Always prefer the highlighted PDF if available
+    if (result.metadata.highlighted_pdf_url) {
+      setSelectedPDF(result.metadata.highlighted_pdf_url);
+    } else {
+      setSelectedPDF(result.metadata.pdf_url ?? null);
+    }
+    
+    // Set the selected card ID
     setSelectedCardId(result.metadata.id);
-    setCurrentPageNumber(null); // Reset the page number when a new PDF is selected
-    setSelectedHighlightedId(null); // Clear previous highlights
-    setHighlightText(''); // Clear highlight text
+    
+    // Reset page number and selected highlight
+    setCurrentPageNumber(null);
+    setSelectedHighlightedId(null);
 
-    // Set default to top match for the newly selected card
+    // Navigate to the page of the first match
     if (result.matches.length > 0) {
       setCurrentPageNumber(result.matches[0].page_number);
       setSelectedHighlightedId(result.matches[0].rank);
-
-      // Set the highlight text based on the match type
-      const topMatch = result.matches[0];
-      if (!precisionSearch && 'starting_keyphrase' in topMatch) {
-        setHighlightText((topMatch as MatchedChunk).starting_keyphrase || '');
-      } else if (precisionSearch && 'question' in topMatch) {
-        setHighlightText((topMatch as MatchedQAPair).question || '');
-      }
     }
   };
 
@@ -95,33 +98,8 @@ const AdvancedSearchEngine: React.FC = () => {
   const handleMatchClick = (pageNumber: number, matchId: number) => {
     setCurrentPageNumber(pageNumber);
     setSelectedHighlightedId(matchId);
-
-    // Find the selected match and extract the highlight text
-    if (selectedCardId) {
-      const selectedResult = searchResults.find(res => res.metadata.id === selectedCardId);
-      if (selectedResult) {
-        const selectedMatch = selectedResult.matches.find(match => match.rank === matchId);
-        if (selectedMatch) {
-          // For generic search, use the starting_keyphrase for highlighting
-          if (!precisionSearch && 'starting_keyphrase' in selectedMatch) {
-            setHighlightText((selectedMatch as MatchedChunk).starting_keyphrase || '');
-          }
-          // For precision search, use the question text for highlighting
-          else if (precisionSearch && 'question' in selectedMatch) {
-            setHighlightText((selectedMatch as MatchedQAPair).question || '');
-          }
-          else {
-            setHighlightText(''); // Fall back to clearing highlight
-          }
-        }
-      }
-    }
   };
 
-  // Toggle between precision (QA) search and regular search
-  const handlePrecisionToggle = () => {
-    setPrecisionSearch(!precisionSearch);
-  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -129,8 +107,8 @@ const AdvancedSearchEngine: React.FC = () => {
       <div
         className="p-6 overflow-y-auto shadow-2xl"
         style={{
-          flex: '0 0 28%', // Make the sidebar strictly 28% of the screen width
-          maxWidth: '28%', // Fix maximum width to prevent shrinking or expanding
+          flex: '0 0 28%',
+          maxWidth: '28%',
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
         }}
       >
@@ -145,8 +123,6 @@ const AdvancedSearchEngine: React.FC = () => {
             {!searchCollapsed && (
               <SearchForm
                 onSubmit={handleSearch}
-                precisionSearch={precisionSearch}
-                onPrecisionToggle={handlePrecisionToggle}
               />
             )}
           </div>
@@ -184,10 +160,10 @@ const AdvancedSearchEngine: React.FC = () => {
                   result={result}
                   onClick={handleCardClick}
                   isSelected={selectedCardId === result.metadata.id}
-                  precisionSearch={precisionSearch}
                 />
               </div>
             ))}
+            
           </div>
         )}
       </div>
@@ -196,11 +172,10 @@ const AdvancedSearchEngine: React.FC = () => {
       <div className="flex flex-col flex-grow h-full overflow-hidden">
         {/* PDF Viewer */}
         <div className="flex-grow min-h-0 overflow-hidden">
-          <PDFJSSimpleViewer
-            key={`${selectedPDF}`} // Only re-render when the PDF URL changes (new document)
+          <PDFViewer
+            key={`${selectedPDF}-${currentPageNumber}`}
             pdfUrl={selectedPDF || ''}
             pageNumber={currentPageNumber || undefined}
-            searchText={highlightText}
           />
         </div>
 

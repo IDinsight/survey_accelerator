@@ -6,47 +6,58 @@ interface PDFJSSimpleViewerProps {
   searchText?: string;
 }
 
-const PDFJSSimpleViewer: React.FC<PDFJSSimpleViewerProps> = ({ pdfUrl, pageNumber, searchText }) => {
+/**
+ * A simplified PDF viewer for pre-highlighted PDFs.
+ * This component works with PDFs that have highlights already added by the backend.
+ */
+const PDFJSSimpleViewer: React.FC<PDFJSSimpleViewerProps> = ({ pdfUrl, pageNumber = 1 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Load PDF with hard-coded settings
+  const [currentPage, setCurrentPage] = useState<number>(pageNumber);
+  
+  // Load the PDF viewer with the pre-highlighted PDF
   useEffect(() => {
-    console.log("Loading PDF viewer with hard-coded settings");
+    if (!pdfUrl) return;
+    
+    console.log("Loading PDF viewer with pre-highlighted PDF");
     setIsLoading(true);
     setError(null);
-
+    
     try {
       const iframe = iframeRef.current;
       if (!iframe) return;
-
-      // Hard-coded URL with exact PDF and search term
-      // Using the format that works with your target PDF and search term
-      const pdfUrl = 'https://storage.googleapis.com/survey_accelerator_dev_bucket/101_KIHBS%202015-16%20Q1C%20Consumption%20Expenditure%20Information.pdf';
-      const hardCodedUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}#page=1&search=pulses`;
-
-      console.log("Loading PDF with hard-coded URL:", hardCodedUrl);
-
-      // Set iframe src
-      iframe.src = hardCodedUrl;
-
+      
+      // Check if the PDF URL is a relative URL
+      // If so, use the full backend URL
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const fullPdfUrl = pdfUrl.startsWith('http') ? pdfUrl : `${backendUrl}${pdfUrl}`;
+      
+      // Just navigate to the specified page - no search parameters needed
+      // since the highlights are already in the PDF
+      const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(fullPdfUrl)}#page=${pageNumber}`;
+      
+      console.log("Loading PDF viewer with URL:", viewerUrl);
+      console.log("Full PDF URL:", fullPdfUrl);
+      iframe.src = viewerUrl;
+      
       // Handle load event
       const handleLoad = () => {
         console.log("PDF viewer loaded");
         setIsLoading(false);
+        setCurrentPage(pageNumber);
       };
-
+      
       // Handle error event
       const handleError = () => {
         console.error("Failed to load PDF viewer");
         setError('Failed to load PDF viewer');
         setIsLoading(false);
       };
-
+      
       iframe.addEventListener('load', handleLoad);
       iframe.addEventListener('error', handleError);
-
+      
       return () => {
         iframe.removeEventListener('load', handleLoad);
         iframe.removeEventListener('error', handleError);
@@ -56,8 +67,48 @@ const PDFJSSimpleViewer: React.FC<PDFJSSimpleViewerProps> = ({ pdfUrl, pageNumbe
       setError('Failed to initialize PDF viewer');
       setIsLoading(false);
     }
-  }, []); // Only run once on component mount
-
+  }, [pdfUrl]); // Only rerun when PDF URL changes
+  
+  // Handle page navigation
+  useEffect(() => {
+    if (!iframeRef.current || !pdfUrl || isLoading) return;
+    
+    if (pageNumber !== currentPage) {
+      console.log(`Navigating to page ${pageNumber}`);
+      
+      try {
+        const iframe = iframeRef.current;
+        
+        // Use the full backend URL for relative paths
+        const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const fullPdfUrl = pdfUrl.startsWith('http') ? pdfUrl : `${backendUrl}${pdfUrl}`;
+        
+        // Update only the page number in the hash
+        const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(fullPdfUrl)}#page=${pageNumber}`;
+        iframe.src = viewerUrl;
+        
+        setCurrentPage(pageNumber);
+      } catch (err) {
+        console.error('Error navigating to page:', err);
+      }
+    }
+  }, [pageNumber, pdfUrl, isLoading, currentPage]);
+  
+  // Page navigation controls
+  const navigateToPage = (direction: 'prev' | 'next') => {
+    const newPage = direction === 'prev' ? Math.max(1, currentPage - 1) : currentPage + 1;
+    setCurrentPage(newPage);
+    
+    if (iframeRef.current) {
+      // Use the full backend URL for relative paths
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const fullPdfUrl = pdfUrl.startsWith('http') ? pdfUrl : `${backendUrl}${pdfUrl}`;
+      
+      const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(fullPdfUrl)}#page=${newPage}`;
+      iframeRef.current.src = viewerUrl;
+    }
+  };
+  
   return (
     <div className="w-full h-full relative">
       {/* Empty state */}
@@ -72,7 +123,7 @@ const PDFJSSimpleViewer: React.FC<PDFJSSimpleViewerProps> = ({ pdfUrl, pageNumbe
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-30">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
-            <p>Loading PDF and searching for "pulses"...</p>
+            <p>Loading pre-highlighted PDF...</p>
           </div>
         </div>
       )}
@@ -98,9 +149,27 @@ const PDFJSSimpleViewer: React.FC<PDFJSSimpleViewerProps> = ({ pdfUrl, pageNumbe
         }}
       />
 
-      {/* Search indicator */}
+      {/* Page navigation controls */}
+      <div className="absolute bottom-2 right-2 bg-white rounded-lg shadow-md p-1 flex items-center">
+        <button 
+          onClick={() => navigateToPage('prev')}
+          className="bg-blue-500 text-white px-3 py-1 rounded-l-md hover:bg-blue-600"
+          disabled={currentPage <= 1}
+        >
+          ← Prev
+        </button>
+        <span className="px-3">Page {currentPage}</span>
+        <button 
+          onClick={() => navigateToPage('next')}
+          className="bg-blue-500 text-white px-3 py-1 rounded-r-md hover:bg-blue-600"
+        >
+          Next →
+        </button>
+      </div>
+      
+      {/* Information display */}
       <div className="absolute bottom-2 left-2 text-xs font-semibold bg-yellow-100 text-yellow-800 px-2 py-1 rounded shadow-sm">
-        Always searching for: "pulses" on page 1
+        Viewing pre-highlighted PDF (highlights added by backend)
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import ingestion, search
+from .search.pdf_highlight_utils import setup_static_file_serving
 from .utils import setup_logger
 
 logger = setup_logger()
@@ -22,6 +23,9 @@ def create_app() -> FastAPI:
     app.include_router(ingestion.router)
     app.include_router(search.router)
 
+    # Set up static file serving for highlighted PDFs
+    setup_static_file_serving(app)
+
     origins = [
         "http://localhost",
         "http://localhost:3000",
@@ -33,5 +37,36 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Disposition", "Content-Type"],
     )
+
+    # Add headers middleware to enable PDF embedding in iframes and objects
+    @app.middleware("http")
+    async def add_pdf_headers(request, call_next):
+        response = await call_next(request)
+
+        # For PDF files, add headers to allow embedding in iframes and objects
+        if (
+            request.url.path.endswith(".pdf")
+            or "/highlighted_pdfs/" in request.url.path
+        ):
+            # Allow cross-origin resource sharing
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            # Allow embedding in iframes from any origin
+            response.headers["X-Frame-Options"] = "ALLOWALL"
+            # Allow embedding in frames, iframes, objects, etc.
+            response.headers["Content-Security-Policy"] = (
+                "frame-ancestors *; object-src *"
+            )
+            # Cache control for PDFs - cache for 1 hour
+            response.headers["Cache-Control"] = "public, max-age=3600"
+            # Ensure PDF is recognized as PDF
+            if request.url.path.endswith(".pdf"):
+                response.headers["Content-Type"] = "application/pdf"
+            # Disable content disposition header if present (prevents download)
+            if "Content-Disposition" in response.headers:
+                del response.headers["Content-Disposition"]
+
+        return response
+
     return app
