@@ -22,53 +22,8 @@ router = APIRouter(
 
 TAG_METADATA = {
     "name": "Search",
-    "description": "Endpoints for querying the document base via different means",
+    "description": "Endpoints for querying the document base",
 }
-
-# Debug endpoint to test PDF viewing
-@router.get("/debug/pdf-test")
-async def test_pdf_viewing():
-    """Test endpoint to check PDF viewing capabilities"""
-    pdf_urls = []
-    # Get a list of PDFs in the highlighted_pdfs folder
-    import os
-    highlighted_dir = os.environ.get("HIGHLIGHT_DIR", "./highlighted_pdfs")
-    if os.path.exists(highlighted_dir):
-        for file in os.listdir(highlighted_dir):
-            if file.endswith('.pdf'):
-                pdf_urls.append(f"/highlighted_pdfs/{file}")
-    
-    # Return sample PDF links for testing
-    return {
-        "message": "Test PDF viewing endpoint",
-        "highlighted_pdfs": pdf_urls[:5],  # First 5 PDFs
-        "test_html": """
-        <html>
-            <head><title>PDF Test</title></head>
-            <body>
-                <h1>Test Highlighted PDFs</h1>
-                <div id="pdf-container" style="width:100%; height:500px;">
-                    <!-- PDF will be loaded here -->
-                </div>
-                <script>
-                    // Get the first PDF URL
-                    const pdfUrls = PDFS_PLACEHOLDER;
-                    if (pdfUrls.length > 0) {
-                        const iframe = document.createElement('iframe');
-                        iframe.src = pdfUrls[0];
-                        iframe.style.width = '100%';
-                        iframe.style.height = '100%';
-                        iframe.style.border = 'none';
-                        document.getElementById('pdf-container').appendChild(iframe);
-                    } else {
-                        document.getElementById('pdf-container').innerHTML = 
-                            '<p>No highlighted PDFs found</p>';
-                    }
-                </script>
-            </body>
-        </html>
-        """.replace("PDFS_PLACEHOLDER", str(pdf_urls[:5]))
-    }
 
 
 @router.post("/generic", response_model=GenericSearchResponse)
