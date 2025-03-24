@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,

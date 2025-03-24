@@ -1,11 +1,12 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.database import get_async_session
 from app.search.models import log_search
 from app.search.pdf_highlight_utils import get_highlighted_pdf
 from app.search.schemas import GenericSearchRequest, GenericSearchResponse
 from app.search.utils import hybrid_search
 from app.utils import setup_logger
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = setup_logger()
 

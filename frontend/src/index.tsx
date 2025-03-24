@@ -6,7 +6,7 @@ import './index.css';
 
 
 ReactDOM.render(
-  <React.StrictMode>  
+  <React.StrictMode>
     <Auth0Provider
     domain="dev-7ta1du6edpr2dv1o.us.auth0.com"
     clientId="Ps4L57Hno5d6d0o93JBTeXd33RF3TrpW"
