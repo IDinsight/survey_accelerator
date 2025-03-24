@@ -1,23 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.auth.dependencies import authenticate_key
 from app.database import get_async_session
 from app.search.models import log_search
 from app.search.pdf_highlight_utils import get_highlighted_pdf
-from app.search.schemas import (
-    GenericSearchRequest,
-    GenericSearchResponse,
-)
+from app.search.schemas import GenericSearchRequest, GenericSearchResponse
 from app.search.utils import hybrid_search
 from app.utils import setup_logger
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = setup_logger()
 
 router = APIRouter(
     prefix="/search",
     tags=["Document Search"],
-    dependencies=[Depends(authenticate_key)],
 )
 
 TAG_METADATA = {
@@ -68,46 +62,54 @@ async def search_generic(
                     # Each match already has starting_keyphrase which contains the words to highlight
                     page_keywords = {}
                     for match in result.matches:
-                        if hasattr(match, 'page_number') and hasattr(match, 'starting_keyphrase'):
+                        if hasattr(match, "page_number") and hasattr(
+                            match, "starting_keyphrase"
+                        ):
                             page_num = match.page_number
                             keyphrase = match.starting_keyphrase
-                            
+
                             # Skip if keyphrase is empty
                             if not keyphrase:
                                 continue
-                                
+
                             # Add this page and keyphrase if not already present
                             if page_num not in page_keywords:
                                 page_keywords[page_num] = []
-                            
+
                             # If keyphrase is already a comma-separated list (as per our updated openai_utils)
                             # use it directly, otherwise add it as a single term
                             if "," in keyphrase:
-                                keywords = [kw.strip() for kw in keyphrase.split(",") if kw.strip()]
+                                keywords = [
+                                    kw.strip()
+                                    for kw in keyphrase.split(",")
+                                    if kw.strip()
+                                ]
                                 page_keywords[page_num].extend(keywords)
                             else:
                                 # Still a phrase, add it as is
                                 page_keywords[page_num].append(keyphrase)
-                    
+
                     # Create a highlighted PDF with the page-specific keywords
                     highlighted_pdf_url = await get_highlighted_pdf(
-                        result.metadata.pdf_url, 
+                        result.metadata.pdf_url,
                         request.query,
-                        page_keywords=page_keywords
+                        page_keywords=page_keywords,
                     )
-                    
+
                     # Add the highlighted PDF URL to the metadata
                     result.metadata.highlighted_pdf_url = highlighted_pdf_url
                 except Exception as e:
                     logger.error(f"Error highlighting PDF: {e}")
                     # If highlighting fails, continue without it
-            
+
             # Add the result to the list
-            generic_results.append({
-                "metadata": result.metadata,
-                "matches": result.matches,
-                "num_matches": result.num_matches,
-            })
+            generic_results.append(
+                {
+                    "metadata": result.metadata,
+                    "matches": result.matches,
+                    "num_matches": result.num_matches,
+                }
+            )
 
         response = GenericSearchResponse(
             query=request.query,
@@ -123,5 +125,3 @@ async def search_generic(
     except Exception as e:
         logger.error(f"Error during generic search for query '{request.query}': {e}")
         raise e
-
-

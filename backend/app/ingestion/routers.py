@@ -3,7 +3,6 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.auth.dependencies import authenticate_key
 from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,
     get_missing_document_ids,
@@ -17,7 +16,6 @@ from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_gcp
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    dependencies=[Depends(authenticate_key)],
     prefix="/ingestion",
     tags=["Document Ingestion"],
 )
