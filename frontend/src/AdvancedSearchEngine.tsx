@@ -5,19 +5,21 @@ import PDFViewer from './components/PDFViewer';
 import SelectedResultDisplay from './components/SelectedResultDisplay';
 import { searchDocuments } from './api';
 import { DocumentSearchResult } from './interfaces';
-import { FaSpinner } from 'react-icons/fa';
+import SequentialSpinner from './components/SequentialSpinner';
 
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
   const [selectedPDF, setSelectedPDF] = useState<string | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [currentPageNumber, setCurrentPageNumber] = useState<number | null>(null);
-  const [searchCollapsed, setSearchCollapsed] = useState<boolean>(false);
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Handle search form submission
+  // Determine whether search results (or an error) are ready.
+  const resultsReady = errorMessage !== null || searchResults.length > 0;
+
+  // Handle search form submission.
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -31,75 +33,51 @@ const AdvancedSearchEngine: React.FC = () => {
     try {
       const results = await searchDocuments(query, country, organization, region);
       setSearchResults(results);
-      setSearchCollapsed(true);
       if (results.length > 0) {
         const topResult = results[0];
-        
-        // Use the highlighted PDF URL if available
         if (topResult.metadata.highlighted_pdf_url) {
           setSelectedPDF(topResult.metadata.highlighted_pdf_url);
         } else {
           setSelectedPDF(topResult.metadata.pdf_url ?? null);
         }
-        
         setSelectedCardId(topResult.metadata.id);
         if (topResult.matches.length > 0) {
           setCurrentPageNumber(topResult.matches[0].page_number);
           setSelectedHighlightedId(topResult.matches[0].rank);
         }
       }
+      // Do not call setLoading(false) here—wait for the spinner sequence to complete.
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
         setErrorMessage('An unknown error occurred.');
       }
-    } finally {
       setLoading(false);
     }
   };
 
-  // Toggle search form visibility
-  const handleToggleSearch = () => {
-    setSearchCollapsed(!searchCollapsed);
-    if (!searchCollapsed) {
-      setSearchResults([]);
-      setSelectedPDF(null);
-      setSelectedCardId(null);
-      setCurrentPageNumber(null);
-      setSelectedHighlightedId(null);
-    }
-  };
-
-  // Handle card click to display PDF and matches
+  // Handle card click to display PDF and matches.
   const handleCardClick = (result: DocumentSearchResult) => {
-    // Always prefer the highlighted PDF if available
     if (result.metadata.highlighted_pdf_url) {
       setSelectedPDF(result.metadata.highlighted_pdf_url);
     } else {
       setSelectedPDF(result.metadata.pdf_url ?? null);
     }
-    
-    // Set the selected card ID
     setSelectedCardId(result.metadata.id);
-    
-    // Reset page number and selected highlight
     setCurrentPageNumber(null);
     setSelectedHighlightedId(null);
-
-    // Navigate to the page of the first match
     if (result.matches.length > 0) {
       setCurrentPageNumber(result.matches[0].page_number);
       setSelectedHighlightedId(result.matches[0].rank);
     }
   };
 
-  // Handle match click to navigate PDF to specific page
+  // Handle match click to navigate PDF to a specific page.
   const handleMatchClick = (pageNumber: number, matchId: number) => {
     setCurrentPageNumber(pageNumber);
     setSelectedHighlightedId(matchId);
   };
-
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -112,48 +90,31 @@ const AdvancedSearchEngine: React.FC = () => {
           background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
         }}
       >
-        {/* Search Form */}
         <div className="mb-6">
-          <img src="/Banner.png" alt="Banner" className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg" />
-          <div
-            className={`transition-all duration-500 ease-in-out ${
-              searchCollapsed ? 'h-0 overflow-hidden' : 'h-auto'
-            }`}
-          >
-            {!searchCollapsed && (
-              <SearchForm
-                onSubmit={handleSearch}
-              />
-            )}
-          </div>
-          {searchCollapsed && (
-            <button
-              onClick={handleToggleSearch}
-              className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4 shadow-md"
-            >
-              Create another search
-            </button>
-          )}
+          // SVG on white background
+          <img
+            src="/SurveyAcceleratorLogo-Blue.svg"
+            alt="Banner"
+            className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg"
+          />
+          <SearchForm onSubmit={handleSearch} />
         </div>
-
-        {/* Loading Spinner */}
+        {/* While loading, show the spinner sequence */}
         {loading && (
           <div className="flex justify-center items-center">
-            <FaSpinner className="animate-spin text-blue-500 text-3xl" />
+            <SequentialSpinner onComplete={() => setLoading(false)} resultsReady={resultsReady} />
           </div>
         )}
 
-        {/* Error Message */}
-        {errorMessage && (
-          <div className="mt-4 p-4 text-red-500 bg-red-100 rounded-lg">
-            {errorMessage}
-          </div>
+        {/* Once loading is complete, show errors or search results */}
+        {!loading && errorMessage && (
+          <div className="mt-4 p-4 text-red-500 bg-red-100 rounded-lg">{errorMessage}</div>
         )}
-
-        {/* Search Results */}
         {!loading && !errorMessage && (
           <div className="space-y-4">
-            {searchResults.length > 0 && <h3 className="text-xl font-semibold">Search Results:</h3>}
+            {searchResults.length > 0 && (
+              <h3 className="text-xl font-semibold">Search Results:</h3>
+            )}
             {searchResults.map((result) => (
               <div key={result.metadata.id}>
                 <SearchResultCard
@@ -163,38 +124,39 @@ const AdvancedSearchEngine: React.FC = () => {
                 />
               </div>
             ))}
-            
           </div>
         )}
       </div>
 
-      {/* Right Side - PDF Viewer and Matches */}
-      <div className="flex flex-col flex-grow h-full overflow-hidden">
-        {/* PDF Viewer */}
-        <div className="flex-grow min-h-0 overflow-hidden">
-          <PDFViewer
-            key={`${selectedPDF}-${currentPageNumber}`}
-            pdfUrl={selectedPDF || ''}
-            pageNumber={currentPageNumber || undefined}
-          />
+      {/* Right Side - PDF Viewer and Matches (only visible when not loading) */}
+      {!loading && (
+        <div className="flex flex-col flex-grow h-full overflow-hidden">
+          <div className="flex-grow min-h-0 overflow-hidden">
+            <PDFViewer
+              key={`${selectedPDF}-${currentPageNumber}`}
+              pdfUrl={selectedPDF || ''}
+              pageNumber={currentPageNumber || undefined}
+            />
+          </div>
+          {selectedCardId &&
+            (() => {
+              const selectedResult = searchResults.find(
+                (res) => res.metadata.id === selectedCardId
+              );
+              return selectedResult ? (
+                <div
+                  className="overflow-y-auto p-0 bg-white shadow"
+                  style={{ maxHeight: '30%' }}
+                >
+                  <SelectedResultDisplay
+                    selectedResult={selectedResult}
+                    onMatchClick={handleMatchClick}
+                  />
+                </div>
+              ) : null;
+            })()}
         </div>
-
-        {/* Selected Result Display */}
-        {selectedCardId && (() => {
-          const selectedResult = searchResults.find(
-            (res) => res.metadata.id === selectedCardId
-          );
-
-          return selectedResult ? (
-            <div className="overflow-y-auto p-0 bg-white shadow" style={{ maxHeight: '30%' }}>
-              <SelectedResultDisplay
-                selectedResult={selectedResult}
-                onMatchClick={handleMatchClick}
-              />
-            </div>
-          ) : null;
-        })()}
-      </div>
+      )}
     </div>
   );
 };

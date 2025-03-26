@@ -1,32 +1,34 @@
 // src/App.tsx
-import React from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import React, { useState } from 'react';
 import AdvancedSearchEngine from './AdvancedSearchEngine';
-import LoginButton from './components/Login';
-import LogoutButton from './components/Logout';
+import AuthPage from './auth/AuthPage';
 import './App.css';
 
+interface User {
+  email: string;
+  // Add additional fields as needed.
+}
+
 const App: React.FC = () => {
-  const { isLoading, error, isAuthenticated } = useAuth0();
+  const [user, setUser] = useState<User | null>(null);
 
-  if (error) {
-    console.error(error);
-    return <div>Authentication Error</div>;
-  }
+  // Called by AuthPage on successful login/registration.
+  const handleLoginSuccess = (userData: User) => {
+    setUser(userData);
+  };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+  // Optionally, pass a logout function to your advanced app.
+  const handleLogout = () => {
+    setUser(null);
+  };
 
   return (
     <>
-      {isAuthenticated ? (
+      {user ? (
+        // You can pass the user object or logout callback if needed.
         <AdvancedSearchEngine />
       ) : (
-        <div className="login-container">
-          <LoginButton />
-          <p>Please log in to access the Advanced Search Engine.</p>
-        </div>
+        <AuthPage onLoginSuccess={handleLoginSuccess} />
       )}
     </>
   );

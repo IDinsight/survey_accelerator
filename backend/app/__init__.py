@@ -1,13 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import ingestion, search
+from . import auth, ingestion, search, users
 from .search.pdf_highlight_utils import setup_static_file_serving
 from .utils import setup_logger
 
 logger = setup_logger()
-
-tags_metadata = [ingestion.TAG_METADATA]
 
 
 def create_app() -> FastAPI:
@@ -16,12 +14,13 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(
         title="Survey Accelerator",
-        openapi_tags=tags_metadata,
         debug=True,
     )
 
     app.include_router(ingestion.router)
     app.include_router(search.router)
+    app.include_router(users.router)
+    app.include_router(auth.router)
 
     # Set up static file serving for highlighted PDFs
     setup_static_file_serving(app)

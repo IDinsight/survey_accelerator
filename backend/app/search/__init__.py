@@ -1,3 +1,3 @@
-from .routers import TAG_METADATA, router
+from .routers import router
 
-__all__ = ["router", "TAG_METADATA"]
+__all__ = ["router"]

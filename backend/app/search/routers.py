@@ -15,11 +15,6 @@ router = APIRouter(
     tags=["Document Search"],
 )
 
-TAG_METADATA = {
-    "name": "Search",
-    "description": "Endpoints for querying the document base",
-}
-
 
 @router.post("/generic", response_model=GenericSearchResponse)
 async def search_generic(

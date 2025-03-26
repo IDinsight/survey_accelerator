@@ -20,10 +20,7 @@ router = APIRouter(
     tags=["Document Ingestion"],
 )
 
-TAG_METADATA = {
-    "name": "Ingestion",
-    "description": "Endpoints for ingesting documents from Airtable records",
-}
+
 MAX_CONCURRENT_DOWNLOADS = 10
 MAX_CONCURRENT_UPLOADS = 10
 MAX_CONCURRENT_PROCESSING = 5  # Processing is CPU intensive
