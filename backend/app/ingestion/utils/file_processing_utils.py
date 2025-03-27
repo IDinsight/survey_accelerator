@@ -150,7 +150,6 @@ async def process_file(
 
     # Prepare tasks for embedding generation and QA extraction
     embedding_tasks = []
-    qa_extraction_tasks = []
 
     summary_index = 0  # Index to keep track of successful summaries
     for page_num, page_text in enumerate(chunks):
@@ -191,7 +190,6 @@ async def process_file(
     embeddings_results = await asyncio.gather(
         *[task for _, task in embedding_tasks], return_exceptions=True
     )
-
 
     # Associate embeddings and QA pairs with processed pages
     for i, page in enumerate(processed_pages):

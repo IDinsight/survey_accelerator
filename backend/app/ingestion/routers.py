@@ -1,9 +1,8 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.auth.dependencies import authenticate_key
 from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,
     get_missing_document_ids,
@@ -17,15 +16,11 @@ from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_gcp
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    dependencies=[Depends(authenticate_key)],
     prefix="/ingestion",
     tags=["Document Ingestion"],
 )
 
-TAG_METADATA = {
-    "name": "Ingestion",
-    "description": "Endpoints for ingesting documents from Airtable records",
-}
+
 MAX_CONCURRENT_DOWNLOADS = 10
 MAX_CONCURRENT_UPLOADS = 10
 MAX_CONCURRENT_PROCESSING = 5  # Processing is CPU intensive
