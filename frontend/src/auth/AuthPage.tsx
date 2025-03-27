@@ -94,10 +94,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       console.error("Authentication error:", error)
       toast(error.message || "Incorrect email or password.", {
         description: "Please check your credentials and try again.",
-        action: {
-          label: "Retry",
-          onClick: () => console.log("Retry authentication"),
-        },
       })
     }
 
@@ -182,117 +178,166 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
       </div>
 
-      {/* Content Area */}
-      <div className="hidden md:flex md:w-2/3 relative z-10 justify-center items-center">
-        <div className="p-8 text-white text-center">
-          <h1 className="text-5xl font-bold mb-6">Survey Accelerator</h1>
-          <p className="text-xl max-w-lg mx-auto">
-            Search a database of the highest quality surveys in seconds.
-          </p>
+      {/* Logo and Text Area */}
+        <div className="hidden md:flex md:w-2/3 relative z-10 justify-center items-center">
+          <div className="p-8 text-center">
+            <img
+              src="/SurveyAcceleratorLogo-White.svg"
+              alt="Survey Accelerator Logo"
+              className="max-w-full h-auto mb-4"
+            />
+            <p className="text-xl max-w-lg mx-auto text-white">
+              Search a database of the highest quality surveys in seconds.
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Form Side */}
       <div className="w-full md:w-1/3 flex items-center justify-center p-4 md:p-8 relative z-10">
-        <Card className="w-full max-w-md border-none bg-white/40 backdrop-blur-sm shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">
-              {authMode === "login" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
-            </CardTitle>
-            {authMode === "forgot" && (
-              <CardDescription className="text-center">
-                Enter your email to receive a password reset link
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="name@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+  <Card className="w-full max-w-md border-none bg-black/20 backdrop-blur-sm shadow-xl text-white">
+    <CardHeader>
+      <CardTitle className="text-center text-2xl">
+        {authMode === "login"
+          ? "Sign In"
+          : authMode === "signup"
+          ? "Sign Up"
+          : "Reset Password"}
+      </CardTitle>
+      {authMode === "forgot" && (
+        <CardDescription className="text-center">
+          Enter your email to receive a password reset link
+        </CardDescription>
+      )}
+    </CardHeader>
+    <CardContent>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-white">
+            Email
+          </Label>
+          <Input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="name@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="text-white"
+          />
+        </div>
 
-              {authMode !== "forgot" && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              )}
+        {authMode !== "forgot" && (
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-white">
+              Password
+            </Label>
+            <Input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className="text-white"
+            />
+          </div>
+        )}
 
-              {authMode === "signup" && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              )}
+        {authMode === "signup" && (
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-white">
+              Confirm Password
+            </Label>
+            <Input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              className="text-white"
+            />
+          </div>
+        )}
 
-              <Button type="submit" className="w-full" disabled={authMode === "forgot" && isResetting}>
-                {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {authMode === "login" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            {authMode === "login" && (
-              <Button variant="link" className="px-0" onClick={() => setAuthMode("forgot")}>
-                Forgot Password?
-              </Button>
-            )}
+        <Button
+          type="submit"
+          className={`w-full ${
+            authMode === "login" ? "bg-white text-black" : ""
+          }`}
+          disabled={authMode === "forgot" && isResetting}
+        >
+          {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {authMode === "login"
+            ? "Sign In"
+            : authMode === "signup"
+            ? "Sign Up"
+            : "Reset Password"}
+        </Button>
+      </form>
+    </CardContent>
+    <CardFooter className="flex flex-col space-y-4">
+      {authMode === "login" && (
+        <Button
+          variant="link"
+          className="px-0 text-white"
+          onClick={() => setAuthMode("forgot")}
+        >
+          Forgot Password?
+        </Button>
+      )}
 
-            <div className="text-center w-full">
-              {authMode === "login" ? (
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-muted-foreground">Don't have an account?</span>
-                  <Button variant="link" className="p-0 h-auto" onClick={() => setAuthMode("signup")}>
-                    Sign Up
-                  </Button>
-                </div>
-              ) : authMode === "signup" ? (
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-muted-foreground">Already have an account?</span>
-                  <Button variant="link" className="p-0 h-auto" onClick={() => setAuthMode("login")}>
-                    Sign In
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-muted-foreground">Remembered your password?</span>
-                  <Button variant="link" className="p-0 h-auto" onClick={() => setAuthMode("login")}>
-                    Sign In
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardFooter>
-        </Card>
+      <div className="text-center w-full">
+        {authMode === "login" ? (
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-sm text-white">
+              Don't have an account?
+            </span>
+            <Button
+              variant="link"
+              className="p-0 h-auto text-white"
+              onClick={() => setAuthMode("signup")}
+            >
+              Sign Up
+            </Button>
+          </div>
+        ) : authMode === "signup" ? (
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-sm text-white">
+              Already have an account?
+            </span>
+            <Button
+              variant="link"
+              className="p-0 h-auto text-white"
+              onClick={() => setAuthMode("login")}
+            >
+              Sign In
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-sm text-white">
+              Remembered your password?
+            </span>
+            <Button
+              variant="link"
+              className="p-0 h-auto text-white"
+              onClick={() => setAuthMode("login")}
+            >
+              Sign In
+            </Button>
+          </div>
+        )}
       </div>
+    </CardFooter>
+  </Card>
+</div>
+
     </div>
   )
 }
 
 export default AuthPage
-

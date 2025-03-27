@@ -42,12 +42,37 @@ async def send_password_reset_email(
 
     message = EmailMessage()
     message["Subject"] = "Your Password Reset"
-    message["From"] = SMTP_USER
+    message["From"] = "Survey Accelerator Support"
     message["To"] = email
+
+    # Set the plain text content as a fallback
     message.set_content(
-        f"Hi,\n\nYour password has been reset. Your new temporary password is:\n\n{new_password}\n\n"
-        "Please log in and change it immediately."
+        f"Hi,\n\nYour password has been reset. Your new temporary password is:\n\n{new_password}\n\nPlease log in and change it immediately."
     )
+
+    # Add an HTML alternative with a styled header
+    html_content = f"""
+<html>
+  <body style="margin: 0; padding: 20px; background-color: #f9f9f9; font-family: Arial, sans-serif; color: #333;">
+    <div style="max-width: 600px; margin: auto;">
+      <p style="font-size: 16px;">Hi there,</p>
+      <p style="font-size: 16px;">Your new temporary password is:</p>
+      <div style="margin: 20px 0; text-align: center;">
+        <span style="display: inline-block; padding: 10px 20px; font-size: 20px; font-weight: bold; color: #d29e01; background-color: #f4f4f4; border-radius: 4px;">
+          {new_password}
+        </span>
+      </div>
+      <p style="font-size: 16px;">You can use this password to sign in and reset your password.</p>
+      <footer style="margin-top: 40px; text-align: center; font-size: 12px; color: #999;">
+        <p style="margin: 0;">&copy; 2025 IDinsight. All rights reserved.</p>
+        <p style="margin: 0;">If you have any issues or suggestions for surveys to add to Survey Accelerator, please don't hesitate to email <a href="mailto:surveyaccelerator@idinsight.org" style="color: #d29e01; text-decoration: none;">surveyaccelerator@idinsight.org</a></p>
+      </footer>
+    </div>
+  </body>
+</html>
+"""
+
+    message.add_alternative(html_content, subtype="html")
 
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as smtp:
         smtp.starttls()
