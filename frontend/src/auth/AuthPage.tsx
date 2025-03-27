@@ -65,6 +65,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         await resetPassword(formData.email)
         toast("Password reset email sent", {
           description: "Please check your email for the temporary password.",
+          duration: 4000, // 4 secs
         })
         setAuthMode("login")
       } catch (error: any) {
@@ -122,7 +123,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       }
       toast(toastMessage, {
         description: toastDescription,
-        duration: 2500, // 2.5 secs
+        duration: 4000, // 4secs
       })
     }
 
@@ -186,17 +187,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
       {/* Logo and Text Area */}
       <div className="hidden md:flex md:w-3/4 relative z-10 justify-center items-center">
-        <div className="p-8 text-center">
-          <img
-            src="/SurveyAcceleratorLogo-White.svg"
-            alt="Survey Accelerator Logo"
-            className="w-850 h-auto mb-4"
-          />
-          <p className="text-2xl max-w-2xl mx-auto text-white">
-            Search a database of the highest quality surveys in seconds, for free.
-          </p>
-        </div>
-      </div>
+  <div className="p-8 text-center">
+    <img
+      src="/SurveyAcceleratorLogo-White.svg"
+      alt="Survey Accelerator Logo"
+      className="w-[850px] h-auto mb-4"
+    />
+    <p className="text-2xl max-w-3xl mx-auto text-white">
+      A search engine for the highest quality surveys at your fingertips.
+      <br />
+      <span className="text-yellow-500">Free, fast and completely open source </span>
+    </p>
+  </div>
+</div>
+
 
 
       {/* Form Side */}
