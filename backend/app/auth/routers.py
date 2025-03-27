@@ -33,13 +33,14 @@ async def login(
     # Check if user exists
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email not recognized.",
         )
 
     # Verify password
     if not verify_password_salted_hash(user_credentials.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
         )
     access_token = await create_access_token(data={"user_id": user.user_id})
 

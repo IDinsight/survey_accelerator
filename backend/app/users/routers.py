@@ -25,7 +25,12 @@ async def create_user(
     session: AsyncSession = Depends(get_async_session),
 ) -> UserOut:
     hashed = get_password_salted_hash(user_data.password)
-    new_user = UsersDB(email=user_data.email, hashed_password=hashed)
+    new_user = UsersDB(
+        email=user_data.email,
+        organization=user_data.organization,
+        role=user_data.role,
+        hashed_password=hashed,
+    )
 
     session.add(new_user)
     try:

@@ -18,6 +18,8 @@ class UserCreate(UserBase):
     """
 
     password: str = Field(..., description="The password of the new user.")
+    organization: str = Field(..., description="The organization of the user.")
+    role: str = Field(..., description="The role of the user.")
 
 
 class UserOut(UserBase):
