@@ -101,15 +101,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           formData.role
         )
         toast("User registered successfully!", {
-          description: "Registration complete.",
+          description: "You can proceed by signing in.",
         })
         // After successful signup, return to login mode.
         setAuthMode("login")
       }
     } catch (error: any) {
       console.error("Authentication error:", error)
-      toast(error.message || "Incorrect email or password.", {
-        description: "Please check your credentials and try again.",
+      let toastMessage = ""
+      let toastDescription = ""
+      if (error.response?.status === 401) {
+        toastMessage = "Incorrect password"
+        toastDescription = "Please try again or select 'Forgot Password'"
+      } else if (error.response?.status === 404) {
+        toastMessage = "Email not recognized"
+        toastDescription = "Please check your credentials or sign up."
+      } else {
+        toastMessage = error.message || "Authentication error"
+        toastDescription = "Please check your credentials or sign up."
+      }
+      toast(toastMessage, {
+        description: toastDescription,
+        duration: 2500, // 2.5 secs
       })
     }
 
@@ -172,18 +185,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       </div>
 
       {/* Logo and Text Area */}
-      <div className="hidden md:flex md:w-2/3 relative z-10 justify-center items-center">
+      <div className="hidden md:flex md:w-3/4 relative z-10 justify-center items-center">
         <div className="p-8 text-center">
           <img
             src="/SurveyAcceleratorLogo-White.svg"
             alt="Survey Accelerator Logo"
-            className="max-w-full h-auto mb-4"
+            className="w-850 h-auto mb-4"
           />
-          <p className="text-xl max-w-lg mx-auto text-white">
-            Search a database of the highest quality surveys in seconds.
+          <p className="text-2xl max-w-2xl mx-auto text-white">
+            Search a database of the highest quality surveys in seconds, for free.
           </p>
         </div>
       </div>
+
 
       {/* Form Side */}
       <div className="w-full md:w-1/3 flex items-center justify-center p-4 md:p-8 relative z-10">
