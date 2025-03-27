@@ -194,7 +194,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       className="w-[850px] h-auto mb-4"
     />
     <p className="text-2xl max-w-3xl mx-auto text-white">
-      A search engine for the highest quality surveys at your fingertips.
+      A search engine for the highest quality surveys at your fingertips
       <br />
       <span className="text-yellow-500">Free, fast and completely open source </span>
     </p>

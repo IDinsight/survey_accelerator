@@ -53,23 +53,48 @@ async def send_password_reset_email(
     # Add an HTML alternative with a styled header
     html_content = f"""
 <html>
-  <body style="margin: 0; padding: 20px; background-color: #f9f9f9; font-family: Arial, sans-serif; color: #333;">
-    <div style="max-width: 600px; margin: auto;">
-      <p style="font-size: 16px;">Hi there,</p>
-      <p style="font-size: 16px;">Your new temporary password is:</p>
-      <div style="margin: 20px 0; text-align: center;">
-        <span style="display: inline-block; padding: 10px 20px; font-size: 20px; font-weight: bold; color: #d29e01; background-color: #f4f4f4; border-radius: 4px;">
-          {new_password}
-        </span>
-      </div>
-      <p style="font-size: 16px;">You can use this password to sign in and reset your password.</p>
-      <footer style="margin-top: 40px; text-align: center; font-size: 12px; color: #999;">
-        <p style="margin: 0;">&copy; 2025 IDinsight. All rights reserved.</p>
-        <p style="margin: 0;">If you have any issues or suggestions for surveys to add to Survey Accelerator, please don't hesitate to email <a href="mailto:surveyaccelerator@idinsight.org" style="color: #d29e01; text-decoration: none;">surveyaccelerator@idinsight.org</a></p>
-      </footer>
-    </div>
-  </body>
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#001f3f" style="background-color:#001f3f; padding:20px;">
+  <tr>
+    <td align="center">
+      <!-- Content container -->
+      <table width="600" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="font-family:Arial, sans-serif; font-size:16px; color:#ffffff; padding-bottom:16px;">
+            Hi there,
+          </td>
+        </tr>
+        <tr>
+          <td style="font-family:Arial, sans-serif; font-size:16px; color:#ffffff; padding-bottom:16px;">
+            Your new temporary password is:
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:20px 0;">
+            <span style="display:inline-block; background-color:#f4f4f4; color:#d29e01; font-size:20px; font-weight:bold; padding:10px 20px; border-radius:4px;">
+              {new_password}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td style="font-family:Arial, sans-serif; font-size:16px; color:#ffffff; padding-bottom:32px;">
+            You can use this password to sign in, then reset your password.
+          </td>
+        </tr>
+        <tr>
+  <td style="font-family:Arial, sans-serif; font-size:12px; color:#999999; border-top:1px solid #444; padding-top:16px; text-align:center;">
+    &copy; 2025 IDinsight. All rights reserved.<br>
+    If you have any issues or suggestions for surveys to add to Survey Accelerator, please email 
+    <a href="mailto:surveyaccelerator@idinsight.org" style="color:#d29e01; text-decoration:none;">surveyaccelerator@idinsight.org</a>
+  </td>
+</tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
 </html>
+
+
 """
 
     message.add_alternative(html_content, subtype="html")
