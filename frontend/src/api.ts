@@ -103,3 +103,45 @@ export const getHighlightedPdf = async (
     throw new Error('Failed to get highlighted PDF. Please try again.');
   }
 };
+
+export const login = async (email: string, password: string): Promise<any> => {
+  const body = new URLSearchParams();
+  body.append("username", email);
+  body.append("password", password);
+
+  const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: body.toString()
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Incorrect email or password.');
+  }
+
+  return response.json();
+}
+
+export const resetPassword = async (email: string): Promise<any> => {
+  try {
+    const response = await axios.post(
+      `${backendUrl}/users/password-reset`,
+      null,
+      {
+        params: { email },
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 25000,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error('Failed to send reset email. Please check your email and try again.');
+  }
+};

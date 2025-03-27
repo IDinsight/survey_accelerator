@@ -24,7 +24,7 @@ async def create_user(
     user_data: UserCreate,
     session: AsyncSession = Depends(get_async_session),
 ) -> UserOut:
-    hashed = await get_password_salted_hash(user_data.password)
+    hashed = get_password_salted_hash(user_data.password)
     new_user = UsersDB(email=user_data.email, hashed_password=hashed)
 
     session.add(new_user)

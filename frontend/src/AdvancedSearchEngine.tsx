@@ -91,7 +91,6 @@ const AdvancedSearchEngine: React.FC = () => {
         }}
       >
         <div className="mb-6">
-          // SVG on white background
           <img
             src="/SurveyAcceleratorLogo-Blue.svg"
             alt="Banner"
