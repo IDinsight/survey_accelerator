@@ -9,13 +9,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
   // Process the PDF URL to ensure we're using the highlighted PDF from backend
   const processedUrl = React.useMemo(() => {
     if (!pdfUrl) return '';
-    
+
     // Is this a highlighted PDF URL?
     const isHighlightedPdf = pdfUrl.includes('/highlighted_pdfs/');
-    
+
     // Backend URL (hardcoded for reliability)
     const backendUrl = 'http://localhost:8000';
-    
+
     let fullUrl;
     if (isHighlightedPdf) {
       // For highlighted PDFs, always use the backend URL
@@ -25,7 +25,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
       // For regular PDFs (from cloud storage), use as is
       fullUrl = pdfUrl;
     }
-    
+
     // Add page number if provided
     return pageNumber ? `${fullUrl}#page=${pageNumber}` : fullUrl;
   }, [pdfUrl, pageNumber]);
@@ -46,7 +46,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
         </object>
       ) : (
         <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Select a document to view.</p>
+          <p className="leading-7 [&:not(:first-child)]:mt-6 text-center">
+            Enter a query in the left panel to search.<br />
+            PDF previews with highlights tailored to your search will then be shown here.
+          </p>
         </div>
       )}
     </div>

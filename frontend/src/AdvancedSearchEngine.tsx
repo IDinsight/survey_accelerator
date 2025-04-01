@@ -46,7 +46,7 @@ const AdvancedSearchEngine: React.FC = () => {
           setSelectedHighlightedId(topResult.matches[0].rank);
         }
       }
-      // Do not call setLoading(false) here—wait for the spinner sequence to complete.
+      // Wait for spinner sequence to complete before setting loading false.
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
@@ -87,12 +87,12 @@ const AdvancedSearchEngine: React.FC = () => {
         style={{
           flex: '0 0 28%',
           maxWidth: '28%',
-          background: 'linear-gradient(to right, #c2e0ff 0%, #c2e0ff 96%, #b8d8f8 100%)',
+          background: '#111130',
         }}
       >
         <div className="mb-6">
           <img
-            src="/SurveyAcceleratorLogo-Blue.svg"
+            src="/SurveyAcceleratorLogo-White.svg"
             alt="Banner"
             className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg"
           />
@@ -104,7 +104,6 @@ const AdvancedSearchEngine: React.FC = () => {
             <SequentialSpinner onComplete={() => setLoading(false)} resultsReady={resultsReady} />
           </div>
         )}
-
         {/* Once loading is complete, show errors or search results */}
         {!loading && errorMessage && (
           <div className="mt-4 p-4 text-red-500 bg-red-100 rounded-lg">{errorMessage}</div>
@@ -112,7 +111,7 @@ const AdvancedSearchEngine: React.FC = () => {
         {!loading && !errorMessage && (
           <div className="space-y-4">
             {searchResults.length > 0 && (
-              <h3 className="text-xl font-semibold">Search Results:</h3>
+              <h3 className="text-xl font-semibold text-white">Search Results:</h3>
             )}
             {searchResults.map((result) => (
               <div key={result.metadata.id}>
@@ -127,33 +126,29 @@ const AdvancedSearchEngine: React.FC = () => {
         )}
       </div>
 
-      {/* Right Side - PDF Viewer and Matches (only visible when not loading) */}
+      {/* Right Side - PDF Viewer and Matches */}
       {!loading && (
-        <div className="flex flex-col flex-grow h-full overflow-hidden">
-          <div className="flex-grow min-h-0 overflow-hidden">
+        <div className="w-[72%] flex flex-col h-full overflow-hidden relative">
+          <div className="flex-grow min-h-0 relative overflow-hidden">
             <PDFViewer
               key={`${selectedPDF}-${currentPageNumber}`}
               pdfUrl={selectedPDF || ''}
               pageNumber={currentPageNumber || undefined}
             />
           </div>
-          {selectedCardId &&
-            (() => {
-              const selectedResult = searchResults.find(
-                (res) => res.metadata.id === selectedCardId
-              );
-              return selectedResult ? (
-                <div
-                  className="overflow-y-auto p-0 bg-white shadow"
-                  style={{ maxHeight: '30%' }}
-                >
-                  <SelectedResultDisplay
-                    selectedResult={selectedResult}
-                    onMatchClick={handleMatchClick}
-                  />
-                </div>
-              ) : null;
-            })()}
+          {selectedCardId && (
+            <div
+              className="overflow-y-auto p-0 bg-white shadow"
+              style={{ maxHeight: '30%' }}
+            >
+              <SelectedResultDisplay
+                selectedResult={searchResults.find(
+                  (res) => res.metadata.id === selectedCardId
+                )!}
+                onMatchClick={handleMatchClick}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
