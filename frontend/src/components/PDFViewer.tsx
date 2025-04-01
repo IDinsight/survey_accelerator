@@ -26,7 +26,7 @@ const PDFViewer: FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
     fullScreen: { enable: false, zIndex: -1 },
     fpsLimit: 60,
     particles: {
-      number: { value: 30 },
+      number: { value: 88 },
       shape: { type: "circle" },
       opacity: { value: 0.5 },
       size: { value: { min: 1, max: 3 } },
