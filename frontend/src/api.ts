@@ -31,7 +31,7 @@ export const searchDocuments = async (
     return response.data.results || [];
   } catch (error) {
     console.error('Error fetching search results:', error);
-    throw new Error('Search request timed out or failed. Please try again.');
+    throw new Error('Search request timed out or failed.');
   }
 };
 
@@ -61,7 +61,7 @@ export const searchGeneric = async (
     return response.data.results || [];
   } catch (error) {
     console.error('Error fetching generic search results:', error);
-    throw new Error('Search request timed out or failed. Please try again.');
+    throw new Error('Search request timed out or failed.');
   }
 };
 
@@ -87,7 +87,7 @@ export const getHighlightedPdf = async (
     return response.data.highlighted_pdf_url;
   } catch (error) {
     console.error('Error getting highlighted PDF:', error);
-    throw new Error('Failed to get highlighted PDF. Please try again.');
+    throw new Error('Failed to get highlighted PDF.');
   }
 };
 
