@@ -315,7 +315,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
               <Button
                 type="submit"
-                className={`w-full ${(authMode === "login" || authMode === "signup") ? "bg-white text-black" : ""}`}
+                className="w-full bg-white text-black"
                 disabled={authMode === "forgot" && isResetting}
               >
                 {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

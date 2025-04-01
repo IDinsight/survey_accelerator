@@ -1,32 +1,201 @@
-import React, { FC } from 'react';
+"use client"
+
+import type React from "react"
+import { type FC, useState, useRef, useEffect } from "react"
+import { Input } from "../components/ui/input"
+import { Button } from "../components/ui/button"
+import { Label } from "../components/ui/label"
+import { Check, ChevronDown } from "lucide-react"
+import { cn } from "../lib/utils"
+import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 
 interface SearchFormProps {
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
 }
 
-const regions = ["Africa", "Global"];
-const countries = ["Ethiopia", "Global", "Nigeria", "Tanzania", "Uganda"];
-const organizations = ["UNICEF", "USAID", "World Bank"];
+// Custom checkbox component
+const CustomCheckbox: FC<{
+  checked: boolean
+  onChange: (checked: boolean) => void
+  children: React.ReactNode
+  disabled?: boolean
+}> = ({ checked, onChange, children, disabled }) => {
+  return (
+    <div
+      className={cn(
+        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-[#1e1e4a]",
+        disabled && "opacity-50 cursor-not-allowed",
+      )}
+      onClick={() => {
+        if (!disabled) {
+          onChange(!checked)
+        }
+      }}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        {checked ? <Check className="h-4 w-4 text-white" /> : null}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+// Custom dropdown component
+const CustomDropdown: FC<{
+  options: string[]
+  selectedOptions: string[]
+  onChange: (selected: string[]) => void
+  placeholder: string
+  label: string
+}> = ({ options, selectedOptions, onChange, placeholder, label }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Handle clicks outside the dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  const toggleOption = (option: string) => {
+    if (selectedOptions.includes(option)) {
+      onChange(selectedOptions.filter((item) => item !== option))
+    } else {
+      onChange([...selectedOptions, option])
+    }
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between text-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>
+          {selectedOptions.length > 0
+            ? `${selectedOptions.length} ${label.toLowerCase()}${selectedOptions.length > 1 ? "s" : ""} selected`
+            : placeholder}
+        </span>
+        <ChevronDown className="h-4 w-4 opacity-50" />
+      </Button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg">
+          <div className="py-2 px-3 text-sm font-medium text-white">{label}</div>
+          <div className="border-t border-gray-700"></div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {options.map((option) => (
+              <CustomCheckbox
+                key={option}
+                checked={selectedOptions.includes(option)}
+                onChange={() => toggleOption(option)}
+              >
+                {option}
+              </CustomCheckbox>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const organizations = ["IDHS", "IDinsight", "National Statistics Bureau", "UNICEF", "USAID", "World Bank"]
+
+const surveytypes = [
+  "DHS Survey",
+  "DOH HPLS Round 1",
+  "DOH HPLS Round 2",
+  "DOH HPLS Round 3",
+  "DOH HPLS Round 4",
+  "Global Findex Survey 2021",
+  "IHDS Round 2",
+  "LSMS-ISA ESS Wave 4",
+  "LSMS-ISA GHS Panel Year 4",
+  "LSMS-ISA TZNPS Year 4",
+  "LSMS-ISA UNPS 2019-20",
+  "MICS7 Base Questionnaire",
+  "MICS7 Complementary Questionnaires",
+  "National household income and expenditure survey",
+  "National labor force survey",
+  "SPA Questionnaire",
+  "TKPI Round 1",
+  "UNICEF WaSHPALS Handwashing Nudges Evaluation",
+  "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
+]
 
 const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
+  const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
+  const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <input name="search" type="text" placeholder="Enter your search query" className="w-full p-2 border rounded shadow-md focus:outline-none" required />
-      <select name="region" className="w-full p-2 border rounded shadow-md">
-        <option value="">Select Region</option>
-        {regions.map(region => <option key={region} value={region}>{region}</option>)}
-      </select>
-      <select name="country" className="w-full p-2 border rounded shadow-md">
-        <option value="">Select Country</option>
-        {countries.map(country => <option key={country} value={country}>{country}</option>)}
-      </select>
-      <select name="organization" className="w-full p-2 border rounded shadow-sm">
-        <option value="">Select Organization</option>
-        {organizations.map(org => <option key={org} value={org}>{org}</option>)}
-      </select>
-      <button type="submit" className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4 shadow-md">Search</button>
-    </form>
-  );
-};
+      {/* Search Query Input */}
+      <div>
+        <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
+          Search Query
+        </Label>
+        <Input
+          id="search"
+          name="search"
+          type="text"
+          placeholder="Enter your search query"
+          className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
+          required
+        />
+      </div>
 
-export default SearchForm;
+      {/* Organizations Dropdown */}
+      <div>
+        <CustomDropdown
+          options={organizations}
+          selectedOptions={selectedOrgs}
+          onChange={setSelectedOrgs}
+          placeholder="Select Organizations"
+          label="Organization"
+        />
+        {/* Hidden input to submit selected organizations */}
+        <input type="hidden" name="organization" value={selectedOrgs.join(",")} />
+      </div>
+
+      {/* Survey Type Dropdown */}
+      <div>
+        <CustomDropdown
+          options={surveytypes}
+          selectedOptions={selectedSurveyTypes}
+          onChange={setSelectedSurveyTypes}
+          placeholder="Select Survey Types"
+          label="Survey Type"
+        />
+        {/* Hidden input to submit selected survey types */}
+        <input type="hidden" name="surveyType" value={selectedSurveyTypes.join(",")} />
+      </div>
+
+      {/* Submit Button and Icon */}
+      <div className="flex items-stretch mt-4 gap-3.5">
+        <Button type="submit" className="w-[83%] bg-white text-black flex items-center justify-center">
+          Search
+        </Button>
+        <Button
+          type="button"
+          title="Search history"
+          className="w-[13.5%] bg-[#d29e01] text-white flex flex-col items-center justify-center p-2"
+        >
+          <YoutubeSearchedForIcon className="w-20 h-20" />
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+export default SearchForm
