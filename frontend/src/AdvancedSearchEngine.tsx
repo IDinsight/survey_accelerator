@@ -47,7 +47,7 @@ const AdvancedSearchEngine: React.FC = () => {
       if (error instanceof Error) {
         toast(error.message, {
           description: "Please try again or reach out to support at surveyaccelerator@idinsight.org",
-          duration: 4000,
+          duration: 4500,
         });
       } else {
         toast("An unknown error occurred.", {
