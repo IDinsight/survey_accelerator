@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
 import { Check, ChevronDown } from "lucide-react"
 import { cn } from "../lib/utils"
+import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -190,22 +191,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
           title="Search history"
           className="w-[13.5%] bg-[#d29e01] text-white flex flex-col items-center justify-center p-2"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-history"
-          >
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M12 7v5l4 2" />
-          </svg>
+          <YoutubeSearchedForIcon className="w-20 h-20" />
         </Button>
       </div>
     </form>
