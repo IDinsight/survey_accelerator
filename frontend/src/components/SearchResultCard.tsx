@@ -1,6 +1,7 @@
 "use client"
 
 import type { FC } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "./ui/card"
 import type { DocumentSearchResult } from "../interfaces"
 import { MapPin, Building, FileSearch } from "lucide-react"
@@ -24,6 +25,17 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
   onMatchClick,
   selectedHighlightedId,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  // Update expansion state when selection changes
+  useEffect(() => {
+    if (isSelected && !isExpanded) {
+      setIsExpanded(true)
+    } else if (!isSelected) {
+      setIsExpanded(false)
+    }
+  }, [isSelected])
+
   // Function to truncate text with ellipsis if it's too long
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return "N/A"
@@ -40,7 +52,14 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
   const badgeWidth = matchesText.length * 8 + 40 // Approximate width calculation
 
   const handleCardClick = () => {
-    onClick(result)
+    if (isSelected) {
+      // If already selected, toggle expansion
+      setIsExpanded(!isExpanded)
+    } else {
+      // If not selected, select it and expand
+      onClick(result)
+      setIsExpanded(true)
+    }
   }
 
   return (
@@ -120,8 +139,9 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           </div>
         </CardContent>
       </Card>
-      {/* Accordion content - Match List (only shown when card is selected) */}
-      {isSelected && result.matches.length > 0 && (
+
+      {/* Accordion content - Match List (only shown when card is selected AND expanded) */}
+      {isSelected && isExpanded && result.matches.length > 0 && (
         <div
           id={`matches-${result.metadata.id}`}
           className="mt-1 transition-all duration-300 max-h-[300px] overflow-y-auto space-y-2 pt-2 custom-scrollbar"
@@ -147,7 +167,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
 
                 {/* Display the contextualized chunk as explanation */}
                 <p className="text-sm mt-0.5 mb-0 leading-tight">
-                  {match.contextualized_chunk || "No explanation available"}
+                  {match.explanation || "No explanation available"}
                 </p>
               </div>
             </div>

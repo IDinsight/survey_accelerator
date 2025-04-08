@@ -16,7 +16,7 @@ export interface DocumentSearchResult {
 export interface Match {
   page_number: number
   rank: number
-  contextualized_chunk: string
+  explanation: string
   question?: string
 }
 
