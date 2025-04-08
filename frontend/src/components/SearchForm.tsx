@@ -1,17 +1,19 @@
 "use client"
 
 import type React from "react"
-import { FC, useState, useRef, useEffect } from "react"
+import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
 import { Check, ChevronDown, Loader2 } from "lucide-react"
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
   loading: boolean
+  onHistoryClick?: () => void
 }
 
 // Custom checkbox component
@@ -25,7 +27,7 @@ const CustomCheckbox: FC<{
     <div
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-[#1e1e4a]",
-        disabled && "opacity-50 cursor-not-allowed"
+        disabled && "opacity-50 cursor-not-allowed",
       )}
       onClick={() => {
         if (!disabled) {
@@ -135,7 +137,7 @@ const surveytypes = [
   "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
 ]
 
-const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading }) => {
+const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
 
@@ -187,19 +189,34 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading }) => {
         <Button
           type="submit"
           className="relative w-[83%] bg-white text-black flex items-center justify-center"
+          disabled={loading}
         >
-          <span>Search</span>
-          {loading && (
-            <Loader2 className="absolute left-[80%] top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-[#FF4500]" />
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Searching...</span>
+            </>
+          ) : (
+            <span>Search</span>
           )}
         </Button>
-        <Button
-          type="button"
-          title="Search history"
-          className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
-        >
-          <YoutubeSearchedForIcon className="w-20 h-20" />
-        </Button>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={onHistoryClick}
+                className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
+              >
+                <YoutubeSearchedForIcon className="w-20 h-20" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Search history</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </form>
   )
