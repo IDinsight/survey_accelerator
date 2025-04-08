@@ -19,3 +19,6 @@ class UsersDB(Base):
     )
     organization: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
+    num_results_preference: Mapped[int] = mapped_column(
+        Integer, server_default=text("25"), nullable=False
+    )

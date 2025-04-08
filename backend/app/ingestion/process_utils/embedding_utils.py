@@ -30,7 +30,7 @@ def create_embedding(text: str) -> list:
         embedding = response.embeddings.float
         return embedding[0]
     except Exception as e:
-        logger.error(f"Error generating embedding: {e}")
+        logger.error(f"Error generating embedding for text {text}: {e}")
         raise e
 
 
