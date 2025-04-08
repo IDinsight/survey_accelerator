@@ -1,55 +1,45 @@
-// interfaces.ts
+export interface DocumentSearchResult {
+  metadata: {
+    title: string
+    summary?: string
+    year: string
+    regions?: string[]
+    countries?: string[]
+    organizations?: string[]
+    id: number
+    pdf_url?: string
+    highlighted_pdf_url?: string
+  }
+  matches: Match[]
+  num_matches?: number
+  strongMatchesCount?: number
+}
 
-export interface Metadata {
-  id: number;
-  file_name: string;
-  title: string;
-  summary: string;
-  pdf_url: string;
-  highlighted_pdf_url?: string; // URL to the PDF with search term highlights already added
-  countries: string[];
-  organizations: string[];
-  regions: string[];
-  year: number;
+export interface Match {
+  page_number: number
+  rank: number
+  contextualized_chunk?: string
+  explanation: string
+  starting_keyphrase?: string
+  strength?: "strong" | "moderate" | "weak"
 }
 
 export interface MatchedChunk {
-  page_number: number;
-  contextualized_chunk: string;
-  relevance_score: number;
-  rank: number;
-  explanation: string;
-  starting_keyphrase: string;
+  page_number: number
+  rank: number
+  explanation: string
 }
 
 export interface MatchedQAPair {
-  page_number: number;
-  question: string;
-  answer: string;
-  relevance_score: number;
-  rank: number;
+  page_number: number
+  rank: number
+  question: string
+  answer: string
 }
 
-// Legacy interface for backward compatibility
-export interface DocumentSearchResult {
-  metadata: Metadata;
-  matches: (MatchedChunk | MatchedQAPair)[];
-  num_matches?: number;
-}
-
-// New interfaces for separate search types
-export interface GenericDocumentSearchResult {
-  metadata: Metadata;
-  matches: MatchedChunk[];
-  num_matches: number;
-}
-
-
-export type Match = MatchedChunk | MatchedQAPair;
-
-// Response types for the API
-export interface GenericSearchResponse {
-  query: string;
-  results: GenericDocumentSearchResult[];
-  message?: string;
+// Helper function to determine match strength based on rank
+export function getMatchStrength(rank: number): "strong" | "moderate" | "weak" {
+  if (rank <= 12) return "strong"
+  if (rank <= 20) return "moderate"
+  return "weak"
 }

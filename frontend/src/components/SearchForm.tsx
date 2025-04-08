@@ -5,12 +5,15 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, Loader2 } from "lucide-react"
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
+  loading: boolean
+  onHistoryClick?: () => void
 }
 
 // Custom checkbox component
@@ -134,7 +137,7 @@ const surveytypes = [
   "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
 ]
 
-const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
+const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
 
@@ -143,13 +146,13 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
       {/* Search Query Input */}
       <div>
         <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
-          Search Query
+          Search Configuration
         </Label>
         <Input
           id="search"
           name="search"
           type="text"
-          placeholder="Enter your search query"
+          placeholder="Enter your query"
           className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
           required
         />
@@ -181,18 +184,38 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
         <input type="hidden" name="surveyType" value={selectedSurveyTypes.join(",")} />
       </div>
 
-      {/* Submit Button and Icon */}
+      {/* Submit and History Buttons */}
       <div className="flex items-stretch mt-4 gap-3.5">
-        <Button type="submit" className="w-[83%] bg-white text-black flex items-center justify-center">
-          Search
-        </Button>
         <Button
-          type="button"
-          title="Search history"
-          className="w-[13.5%] bg-[#d29e01] text-white flex flex-col items-center justify-center p-2"
+          type="submit"
+          className="relative w-[83%] bg-white text-black flex items-center justify-center"
+          disabled={loading}
         >
-          <YoutubeSearchedForIcon className="w-20 h-20" />
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            </>
+          ) : (
+            <span>Search</span>
+          )}
         </Button>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={onHistoryClick}
+                className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
+              >
+                <YoutubeSearchedForIcon className="w-20 h-20" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Search history</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </form>
   )
