@@ -177,7 +177,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
           {/* Search results without glass effect */}
           <div>
             {searchResults.length > 0 && (
-              <h3 className="text-xl font-semibold text-white mb-2 text-center">Top Documents</h3>
+              <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>
             )}
             <div className="space-y-3">
               {searchResults.map((result) => (
