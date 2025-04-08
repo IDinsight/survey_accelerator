@@ -1,16 +1,17 @@
 "use client"
 
 import type React from "react"
-import { type FC, useState, useRef, useEffect } from "react"
+import { FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, Loader2 } from "lucide-react"
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
+  loading: boolean
 }
 
 // Custom checkbox component
@@ -24,7 +25,7 @@ const CustomCheckbox: FC<{
     <div
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-[#1e1e4a]",
-        disabled && "opacity-50 cursor-not-allowed",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
       onClick={() => {
         if (!disabled) {
@@ -134,7 +135,7 @@ const surveytypes = [
   "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
 ]
 
-const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
+const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
 
@@ -181,15 +182,21 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit }) => {
         <input type="hidden" name="surveyType" value={selectedSurveyTypes.join(",")} />
       </div>
 
-      {/* Submit Button and Icon */}
+      {/* Submit and History Buttons */}
       <div className="flex items-stretch mt-4 gap-3.5">
-        <Button type="submit" className="w-[83%] bg-white text-black flex items-center justify-center">
-          Search
+        <Button
+          type="submit"
+          className="relative w-[83%] bg-white text-black flex items-center justify-center"
+        >
+          <span>Search</span>
+          {loading && (
+            <Loader2 className="absolute left-[80%] top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-[#FF4500]" />
+          )}
         </Button>
         <Button
           type="button"
           title="Search history"
-          className="w-[13.5%] bg-[#d29e01] text-white flex flex-col items-center justify-center p-2"
+          className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
         >
           <YoutubeSearchedForIcon className="w-20 h-20" />
         </Button>

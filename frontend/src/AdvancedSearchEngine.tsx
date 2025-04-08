@@ -6,7 +6,6 @@ import PDFViewer from "./components/PDFViewer";
 import SelectedResultDisplay from "./components/SelectedResultDisplay";
 import { searchDocuments } from "./api";
 import { DocumentSearchResult } from "./interfaces";
-import SequentialSpinner from "./components/SequentialSpinner";
 
 const AdvancedSearchEngine: React.FC = () => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([]);
@@ -81,8 +80,8 @@ const AdvancedSearchEngine: React.FC = () => {
   };
 
   return (
-<div className="grid grid-cols-[28%_72%] h-screen bg-gray-100">
-  {/* Left Panel: 1/3 width */}
+    <div className="grid grid-cols-[28%_72%] h-screen bg-gray-100">
+      {/* Left Panel */}
       <div className="p-6 overflow-y-auto shadow-2xl bg-[#111130]">
         <div className="mb-6">
           <img
@@ -90,14 +89,9 @@ const AdvancedSearchEngine: React.FC = () => {
             alt="Banner"
             className="w-full h-auto object-cover mb-4 rounded-lg shadow-lg"
           />
-          <SearchForm onSubmit={handleSearch} />
+          {/* Pass the loading state to SearchForm */}
+          <SearchForm onSubmit={handleSearch} loading={loading} />
         </div>
-        {loading && (
-          <div className="flex justify-center items-center">
-            <SequentialSpinner onComplete={() => {}} resultsReady={resultsReady} />
-          </div>
-        )}
-        {/* No error card; errors are shown via toast */}
         <div className="space-y-4">
           {searchResults.length > 0 && (
             <h3 className="text-xl font-semibold text-white">Search Results:</h3>
@@ -114,7 +108,7 @@ const AdvancedSearchEngine: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel: 2/3 width */}
+      {/* Right Panel */}
       <div className="relative flex flex-col h-full overflow-hidden">
         <div className="relative flex-grow min-h-0 overflow-hidden">
           <PDFViewer

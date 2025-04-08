@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState, useCallback } from "react"
-import axios from "axios"
 import { login, resetPassword, registerUser } from "../api"
 import { toast } from "sonner"
 import {
@@ -32,9 +31,6 @@ interface AuthPageProps {
     action_taken: string
   }) => void
 }
-
-const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'
-const authToken = process.env.NEXT_PUBLIC_BACKEND_PW || 'kk'
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState<AuthMode>("login")
