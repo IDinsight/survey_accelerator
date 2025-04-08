@@ -9,6 +9,7 @@ import PDFViewer from "./components/PDFViewer"
 import IslandLayout from "./components/IslandLayout"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
+import { getMatchStrength } from "./interfaces"
 import "./styles/scrollbar.css"
 
 const AdvancedSearchEngine: React.FC = () => {
@@ -30,9 +31,29 @@ const AdvancedSearchEngine: React.FC = () => {
 
     try {
       const results = await searchDocuments(query, country, organization, region)
-      setSearchResults(results)
-      if (results.length > 0) {
-        const topResult = results[0]
+
+      // Sort results by number of strong matches
+      const sortedResults = results
+        .map((result: DocumentSearchResult) => {
+          // Count strong matches
+          const strongMatchesCount = result.matches.filter((match) => getMatchStrength(match.rank) === "strong").length
+
+          return {
+            ...result,
+            strongMatchesCount,
+          }
+        })
+        .sort(
+          (
+            a: DocumentSearchResult & { strongMatchesCount: number },
+            b: DocumentSearchResult & { strongMatchesCount: number },
+          ) => b.strongMatchesCount - a.strongMatchesCount,
+        )
+
+      setSearchResults(sortedResults)
+
+      if (sortedResults.length > 0) {
+        const topResult = sortedResults[0]
         if (topResult.metadata.highlighted_pdf_url) {
           setSelectedPDF(topResult.metadata.highlighted_pdf_url)
         } else {

@@ -67,7 +67,7 @@ class DocumentSearchResult(BaseModel):
     """Legacy schema for a document search result."""
 
     metadata: DocumentMetadata
-    matches: List  # List of MatchedChunk or MatchedQAPair
+    matches: List[MatchedChunk]
     num_matches: Optional[int] = None
 
 

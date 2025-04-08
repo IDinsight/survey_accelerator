@@ -166,7 +166,7 @@ async def hybrid_search(
         # Embed the query
         embedding_response = await embed_query(query_str)
 
-        # Perform semantic and keyword searches with the higher `INITIAL_TOP_K`
+        # Perform semantic and keyword searches with the higher INITIAL_TOP_K
         semantic_results = await perform_semantic_search(
             session,
             embedding_response.embeddings[0],
@@ -196,7 +196,6 @@ async def hybrid_search(
         texts = []
         match_info = []
 
-
         for doc, _score in combined_results:
             text = doc.contextualized_chunk
             texts.append(text)
@@ -219,63 +218,73 @@ async def hybrid_search(
             return_documents=False,
         )
 
-        # Collect reranked matches
+        # Collect reranked matches with strength labels
         reranked_matches = []
         for rank, result in enumerate(rerank_response.results):
             index = result.index
             info = match_info[index]
             doc = info["doc"]
-            reranked_matches.append(
-                {
-                    "doc": doc,
-                    "page_number": info["page_number"],
-                    "rank": rank + 1,
-                }
-            )
+            # Create a dict for the match result with a 1-based rank.
+            match_result = {
+                "doc": doc,
+                "page_number": info["page_number"],
+                "rank": rank + 1,
+                # Assign strength based on overall rank
+                "strength": (
+                    "Strong"
+                    if (rank + 1) <= 12
+                    else ("Moderate" if (rank + 1) <= 20 else "Weak")
+                ),
+            }
+            reranked_matches.append(match_result)
 
-        # Take top matches
+        # Take top FINAL_TOP_RESULTS matches for further processing
         top_matches = reranked_matches[:FINAL_TOP_RESULTS]
 
-        # Generate explanations and extract highlight keyphrases
-        # Create tasks for both explanations and highlight keyphrases
+        # Generate explanations and extract highlight keyphrases concurrently
         explanation_tasks = [
             generate_query_match_explanation(
                 query_str, match["doc"].contextualized_chunk
             )
             for match in top_matches
         ]
-
         keyphrase_tasks = [
-            extract_highlight_keyphrase(
-                query_str, match["doc"].contextualized_chunk
-            )
+            extract_highlight_keyphrase(query_str, match["doc"].contextualized_chunk)
             for match in top_matches
         ]
-
-        # Run all tasks concurrently for better performance
+        # Execute all tasks concurrently
         all_results = await asyncio.gather(*explanation_tasks, *keyphrase_tasks)
-
-        # Split the results - first half are explanations, second half are keyphrases
         explanations = all_results[: len(top_matches)]
         keyphrases = all_results[len(top_matches) :]
 
-        # Group matches by document_id and build final results
+        # Group matches by document_id and count strength levels for sorting
         documents = {}
         for i, match in enumerate(top_matches):
             doc = match["doc"]
             document_id = doc.document_id
+
             if document_id not in documents:
                 documents[document_id] = {
                     "doc": doc,
                     "matches": [],
-                    "best_rank": match["rank"],
+                    "strong_count": 0,
+                    "moderate_count": 0,
+                    "weak_count": 0,
                 }
-            explanation = explanations[i]
+
+            # Count strengths
+            if match["strength"] == "Strong":
+                documents[document_id]["strong_count"] += 1
+            elif match["strength"] == "Moderate":
+                documents[document_id]["moderate_count"] += 1
+            else:
+                documents[document_id]["weak_count"] += 1
+
+            # Build the MatchedChunk object using the explanation and keyphrase
             matched_chunk = MatchedChunk(
                 page_number=match["page_number"],
                 rank=match["rank"],
-                explanation=explanation,
-                # Use the extracted keyphrase for intelligent highlighting
+                explanation=explanations[i],
                 starting_keyphrase=(
                     keyphrases[i]
                     if keyphrases[i]
@@ -288,11 +297,14 @@ async def hybrid_search(
             )
             documents[document_id]["matches"].append(matched_chunk)
 
-            if match["rank"] < documents[document_id]["best_rank"]:
-                documents[document_id]["best_rank"] = match["rank"]
+        # Sort documents by strong_count (primary) and then moderate_count (secondary)
+        sorted_documents = sorted(
+            documents.values(),
+            key=lambda d: (d["strong_count"], d["moderate_count"], -d["weak_count"]),
+            reverse=True,
+        )
 
-        # Sort documents by best_rank and create final search results
-        sorted_documents = sorted(documents.values(), key=lambda x: x["best_rank"])
+        # Create final search result objects
         final_results = [
             DocumentSearchResult(
                 metadata=create_metadata(doc_entry["doc"]),

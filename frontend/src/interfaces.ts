@@ -11,13 +11,17 @@ export interface DocumentSearchResult {
     highlighted_pdf_url?: string
   }
   matches: Match[]
+  num_matches?: number
+  strongMatchesCount?: number
 }
 
 export interface Match {
   page_number: number
   rank: number
+  contextualized_chunk?: string
   explanation: string
-  question?: string
+  starting_keyphrase?: string
+  strength?: "strong" | "moderate" | "weak"
 }
 
 export interface MatchedChunk {
@@ -31,4 +35,11 @@ export interface MatchedQAPair {
   rank: number
   question: string
   answer: string
+}
+
+// Helper function to determine match strength based on rank
+export function getMatchStrength(rank: number): "strong" | "moderate" | "weak" {
+  if (rank <= 12) return "strong"
+  if (rank <= 20) return "moderate"
+  return "weak"
 }

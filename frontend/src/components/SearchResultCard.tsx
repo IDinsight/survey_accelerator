@@ -4,6 +4,7 @@ import type { FC } from "react"
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "./ui/card"
 import type { DocumentSearchResult } from "../interfaces"
+import { getMatchStrength } from "../interfaces"
 import { MapPin, Building, FileSearch } from "lucide-react"
 
 interface SearchResultCardProps {
@@ -18,6 +19,20 @@ const MatchIcon: FC<{ className?: string }> = ({ className }) => {
   return <FileSearch className={className} />
 }
 
+// Helper function to get badge color based on match strength
+const getStrengthColor = (strength: "strong" | "moderate" | "weak") => {
+  switch (strength) {
+    case "strong":
+      return "bg-green-500/80 text-white"
+    case "moderate":
+      return "bg-green-300/60 text-white"
+    case "weak":
+      return "bg-gray-400/60 text-white"
+    default:
+      return "bg-gray-400/60 text-white"
+  }
+}
+
 const SearchResultCard: FC<SearchResultCardProps> = ({
   result,
   onClick,
@@ -26,6 +41,15 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
   selectedHighlightedId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  // Calculate match strengths
+  const matchesWithStrength = result.matches.map((match: any) => ({
+    ...match,
+    strength: getMatchStrength(match.rank),
+  }))
+
+  // Count strong matches for display
+  const strongMatchesCount = matchesWithStrength.filter((m) => m.strength === "strong").length
 
   // Update expansion state when selection changes
   useEffect(() => {
@@ -49,7 +73,8 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
 
   // Calculate badge width for proper text wrapping
   const matchesText = `${result.matches.length} ${result.matches.length === 1 ? "Match" : "Matches"}`
-  const badgeWidth = matchesText.length * 8 + 40 // Approximate width calculation
+  const strongText = strongMatchesCount > 0 ? `${strongMatchesCount} Strong` : ""
+  const badgeWidth = (matchesText.length + strongText.length) * 8 + 40 // Approximate width calculation
 
   const handleCardClick = () => {
     if (isSelected) {
@@ -119,7 +144,10 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
               }}
             >
               <MatchIcon className="h-3.5 w-3.5" />
-              <span>{matchesText}</span>
+              <span>
+                {matchesText}
+                {strongMatchesCount > 0 && <span className="ml-1">• {strongText}</span>}
+              </span>
             </div>
 
             {/* Description text with custom styling to wrap around the badge */}
@@ -147,31 +175,37 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           className="mt-1 transition-all duration-300 max-h-[300px] overflow-y-auto space-y-2 pt-2 custom-scrollbar"
           style={{ marginTop: "4px" }}
         >
-          {result.matches.map((match, index) => (
-            <div
-              key={index}
-              className={`
-                bg-black/30 hover:bg-black/40 text-white cursor-pointer
-                transition-all duration-200 rounded-md backdrop-blur-sm
-                ${selectedHighlightedId === match.rank ? "border-l-4 border-[#CC7722]" : ""}
-              `}
-              onClick={(e) => {
-                e.stopPropagation()
-                onMatchClick(match.page_number, match.rank)
-              }}
-            >
-              <div className="p-1.5">
-                <div className="text-xs text-white/90 mb-1">
-                  Rank {match.rank} from Page {match.page_number}
-                </div>
+          {matchesWithStrength.map((match, index) => {
+            const strength = match.strength || "weak"
+            const strengthColor = getStrengthColor(strength)
 
-                {/* Display the contextualized chunk as explanation */}
-                <p className="text-sm mt-0.5 mb-0 leading-tight">
-                  {match.explanation || "No explanation available"}
-                </p>
+            return (
+              <div
+                key={index}
+                className={`
+                  bg-black/30 hover:bg-black/40 text-white cursor-pointer
+                  transition-all duration-200 rounded-md backdrop-blur-sm
+                  ${selectedHighlightedId === match.rank ? "border-l-4 border-[#CC7722]" : ""}
+                `}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMatchClick(match.page_number, match.rank)
+                }}
+              >
+                <div className="p-1.5">
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="text-xs text-white/90">Page {match.page_number}</div>
+                    <div className={`text-xs px-2 py-0.5 rounded-full ${strengthColor}`}>
+                      {strength.charAt(0).toUpperCase() + strength.slice(1)}
+                    </div>
+                  </div>
+
+                  {/* Display the explanation */}
+                  <p className="text-sm mt-0.5 mb-0 leading-tight">{match.explanation || "No explanation available"}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
