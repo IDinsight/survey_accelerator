@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.auth.dependencies import authenticate_user
 from app.database import get_async_session
 from app.search.models import log_search
 from app.search.pdf_highlight_utils import get_highlighted_pdf
 from app.search.schemas import GenericSearchRequest, GenericSearchResponse
 from app.search.utils import hybrid_search
+from app.users.models import UsersDB
 from app.utils import setup_logger
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = setup_logger()
 
@@ -20,6 +21,7 @@ router = APIRouter(
 async def search_generic(
     request: GenericSearchRequest,
     session: AsyncSession = Depends(get_async_session),
+    user: UsersDB = Depends(authenticate_user),
 ) -> GenericSearchResponse:
     # Log the request for debugging
     logger.info(f"Generic search request: {request.query}")

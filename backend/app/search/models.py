@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, Text
+from app.users.models import UsersDB
+from app.utils import setup_logger
+from sqlalchemy import JSON, DateTime, Integer, Text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
-
-from app.utils import setup_logger
 
 from ..models import Base
 
@@ -23,6 +23,10 @@ class SearchLogDB(Base):
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
     search_response: Mapped[dict] = mapped_column(JSON, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
 
     def __repr__(self) -> str:
         """Return a string representation of the object."""
@@ -32,6 +36,7 @@ class SearchLogDB(Base):
 
 async def log_search(
     asession: AsyncSession,
+    user: UsersDB,
     query: str,
     search_response: dict,
 ) -> None:
@@ -43,6 +48,7 @@ async def log_search(
             query=query,
             timestamp=datetime.now(timezone.utc),
             search_response=search_response,
+            user_id=user.user_id,
         )
         asession.add(search_log)
         await asession.commit()
