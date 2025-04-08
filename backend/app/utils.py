@@ -6,7 +6,6 @@ import logging
 import os
 import secrets
 from logging import Logger
-from uuid import uuid4
 
 from .config import LOG_LEVEL
 
@@ -67,13 +66,6 @@ def get_log_level_from_str(log_level_str: str = LOG_LEVEL) -> int:
     }
 
     return log_level_dict.get(log_level_str.upper(), logging.INFO)
-
-
-def generate_secret_key() -> str:
-    """
-    Generate a secret key for the user query
-    """
-    return uuid4().hex
 
 
 def setup_logger(
