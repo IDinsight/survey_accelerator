@@ -93,7 +93,7 @@ const CustomDropdown: FC<{
       </Button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg">
+        <div className="absolute z-[100] mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg">
           <div className="py-2 px-3 text-sm font-medium text-white">{label}</div>
           <div className="border-t border-gray-700"></div>
           <div className="max-h-[300px] overflow-y-auto">
@@ -146,13 +146,13 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
       {/* Search Query Input */}
       <div>
         <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
-          Search Configuration
+          Search Query
         </Label>
         <Input
           id="search"
           name="search"
           type="text"
-          placeholder="Enter your query"
+          placeholder="Enter your search query"
           className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
           required
         />
@@ -194,6 +194,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Searching...</span>
             </>
           ) : (
             <span>Search</span>

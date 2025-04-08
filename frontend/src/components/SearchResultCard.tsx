@@ -1,7 +1,7 @@
 "use client"
 
 import type { FC } from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "./ui/card"
 import type { DocumentSearchResult } from "../interfaces"
 import { getMatchStrength } from "../interfaces"
@@ -51,6 +51,15 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
   // Count strong matches for display
   const strongMatchesCount = matchesWithStrength.filter((m) => m.strength === "strong").length
 
+  // Auto-expand when selected
+  useEffect(() => {
+    if (isSelected) {
+      setIsExpanded(true)
+    } else {
+      setIsExpanded(false)
+    }
+  }, [isSelected])
+
   // Function to truncate text with ellipsis if it's too long
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return "N/A"
@@ -71,8 +80,9 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
       // If already selected, toggle expansion
       setIsExpanded(!isExpanded)
     } else {
-      // If not selected, select it but don't expand automatically
+      // If not selected, select it
       onClick(result)
+      // Expansion will happen automatically via useEffect
     }
   }
 
@@ -96,13 +106,13 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
         }}
       >
         {/* Title */}
-        <div className="px-4 pt-2 pb-0 -mb-5 -mt-4">
+        <div className="px-4 pt-2 pb-0">
           <h3 className="text-lg font-semibold text-white leading-tight">{result.metadata.title}</h3>
         </div>
 
         {/* Content */}
-        <CardContent className="py-2 px-4 space-y-2">
-          <div className="grid grid-cols-1 gap-1 text-sm text-white/90">
+        <CardContent className="py-1 px-4 space-y-1">
+          <div className="grid grid-cols-1 gap-0.5 text-sm text-white/90">
             <div className="flex items-center gap-2">
               <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-white" />
               <span className="truncate" title={`Region: ${regions}, Country: ${countries}`}>
@@ -119,18 +129,18 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           </div>
 
           {/* Description - now full width with no wrapping around badge */}
-          <p className="text-sm text-white/90 mt-1 mb-3">{result.metadata.summary || "No summary available"}</p>
+          <p className="text-sm text-white/90 mt-0.5 mb-2">{result.metadata.summary || "No summary available"}</p>
 
           {/* Badge now at the bottom right */}
           <div className="flex justify-end">
             <div
               className={`
-                flex items-center gap-1 px-2 py-1 rounded-md -mb-3.5
+                flex items-center gap-1 px-2 py-1 rounded-md
                 ${isSelected ? "bg-white/80 text-[#CC7722]" : "bg-white/20 text-white"}
                 text-sm font-medium whitespace-nowrap
               `}
             >
-              <MatchIcon className="h-3.5 w-3.5 " />
+              <MatchIcon className="h-3.5 w-3.5" />
               <span>
                 {matchesText}
                 {strongMatchesCount > 0 && <span className="ml-1">• {strongText}</span>}
@@ -145,7 +155,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
         <div
           id={`matches-${result.metadata.id}`}
           className="mt-1 transition-all duration-300 max-h-[300px] overflow-y-auto space-y-1.5 pt-1.5 custom-scrollbar"
-          style={{ marginTop: "4px" }}
+          style={{ marginTop: "3px" }}
         >
           {matchesWithStrength.map((match, index) => {
             const strength = match.strength || "weak"
@@ -164,8 +174,8 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
                   onMatchClick(match.page_number, match.rank)
                 }}
               >
-                <div className="p-2.5">
-                  <div className="flex justify-between items-center mb-1">
+                <div className="p-2">
+                  <div className="flex justify-between items-center mb-0.5">
                     <div className="text-xs text-white/90">Page {match.page_number}</div>
                     <div className={`text-xs px-2 py-0.5 rounded-full ${strengthColor}`}>
                       {strength.charAt(0).toUpperCase() + strength.slice(1)}
@@ -173,7 +183,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
                   </div>
 
                   {/* Display the explanation */}
-                  <p className="text-sm mt-1 mb-0 leading-tight">{match.explanation || "No explanation available"}</p>
+                  <p className="text-sm mt-0.5 mb-0 leading-tight">{match.explanation || "No explanation available"}</p>
                 </div>
               </div>
             )

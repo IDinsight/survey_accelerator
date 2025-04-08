@@ -25,42 +25,12 @@ export const searchDocuments = async (
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
-        timeout: 25000, // 25 seconds timeout
+        timeout: 40000, // 25 seconds timeout
       }
     );
     return response.data.results || [];
   } catch (error) {
     console.error('Error fetching search results:', error);
-    throw new Error('Search request timed out or failed.');
-  }
-};
-
-export const searchGeneric = async (
-  query: string,
-  country?: string,
-  organization?: string,
-  region?: string
-) => {
-  try {
-    const response = await axios.post(
-      `${backendUrl}/search/generic`,
-      {
-        query,
-        country: country || undefined,
-        organization: organization || undefined,
-        region: region || undefined,
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 25000,
-      }
-    );
-    return response.data.results || [];
-  } catch (error) {
-    console.error('Error fetching generic search results:', error);
     throw new Error('Search request timed out or failed.');
   }
 };
@@ -81,7 +51,7 @@ export const getHighlightedPdf = async (
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
-        timeout: 30000, // 30 seconds for PDF processing
+        timeout: 40000, // 40 seconds for PDF processing
       }
     );
     return response.data.highlighted_pdf_url;

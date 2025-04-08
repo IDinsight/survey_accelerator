@@ -1,24 +1,47 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import SearchForm from "./components/SearchForm"
 import SearchResultCard from "./components/SearchResultCard"
 import PDFViewer from "./components/PDFViewer"
 import IslandLayout from "./components/IslandLayout"
+import SettingsPopup from "./components/SettingsPopup"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
+import { LogOut, Settings } from "lucide-react"
+import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 
-const AdvancedSearchEngine: React.FC = () => {
+interface User {
+  email: string
+  user_id: number
+}
+
+interface AdvancedSearchEngineProps {
+  onLogout?: () => void
+  user?: User | null
+}
+
+const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, user }) => {
   const [searchResults, setSearchResults] = useState<DocumentSearchResult[]>([])
   const [selectedPDF, setSelectedPDF] = useState<string | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
   const [currentPageNumber, setCurrentPageNumber] = useState<number | null>(null)
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [resultsCount, setResultsCount] = useState(25) // Default to 25 results
+
+  // Load saved preferences on component mount
+  useEffect(() => {
+    const savedResultsCount = localStorage.getItem("resultsCount")
+    if (savedResultsCount) {
+      setResultsCount(Number.parseInt(savedResultsCount, 10))
+    }
+  }, [])
 
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -30,7 +53,8 @@ const AdvancedSearchEngine: React.FC = () => {
     const region = formData.get("region") as string
 
     try {
-      const results = await searchDocuments(query, country, organization, region)
+      // Pass the resultsCount to the API
+      const results = await searchDocuments(query, country, organization, region, resultsCount)
 
       // Sort results by number of strong matches
       const sortedResults = results
@@ -94,17 +118,56 @@ const AdvancedSearchEngine: React.FC = () => {
     setSelectedHighlightedId(matchId)
   }
 
+  const handleUpdateResultsCount = (count: number) => {
+    setResultsCount(count)
+    localStorage.setItem("resultsCount", count.toString())
+    // If you want to store in DB, you would make an API call here
+  }
+
+  // Create a default user object if none is provided
+  const defaultUser = {
+    email: localStorage.getItem("email") || "user@example.com",
+    user_id: Number.parseInt(localStorage.getItem("user_id") || "0", 10),
+  }
+
   return (
     <IslandLayout>
+      {showSettings && (
+        <SettingsPopup
+          user={user || defaultUser}
+          onClose={() => setShowSettings(false)}
+          onUpdateResultsCount={handleUpdateResultsCount}
+          resultsCount={resultsCount}
+        />
+      )}
+
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
-          <div className="mb-2">
-            <img
-              src="/SurveyAcceleratorLogo-White.svg"
-              alt="Banner"
-              className="w-full h-auto object-cover mb-4 rounded-lg"
-            />
+          <div className="mb-3">
+            <div className="flex justify-between items-center mb-4">
+              <img
+                src="/SurveyAcceleratorLogo-White.svg"
+                alt="Banner"
+                className="w-4/5 h-auto object-cover rounded-lg"
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowSettings(true)}
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  title="Settings"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+                {onLogout && (
+                  <Button onClick={onLogout} variant="ghost" className="text-white hover:bg-white/10" title="Logout">
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* Search form with glass effect */}
             <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4">
               <SearchForm onSubmit={handleSearch} loading={loading} />
