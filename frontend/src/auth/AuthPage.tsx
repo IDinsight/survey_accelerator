@@ -1,21 +1,14 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { login, resetPassword, registerUser } from "../api"
 import { toast } from "sonner"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import Particles from "react-tsparticles"
 import type { Engine } from "tsparticles-engine"
 import { loadSlim } from "tsparticles-slim"
@@ -32,9 +25,12 @@ interface AuthPageProps {
   }) => void
 }
 
+const MIN_PASSWORD_LENGTH = 8
+
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState<AuthMode>("login")
   const [isResetting, setIsResetting] = useState<boolean>(false)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,6 +38,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     organization: "",
     role: "",
   })
+
+  // Password validation states
+  const [passwordLengthValid, setPasswordLengthValid] = useState(false)
+  const [passwordsMatch, setPasswordsMatch] = useState(false)
+
+  // Validate password on change
+  useEffect(() => {
+    setPasswordLengthValid(formData.password.length >= MIN_PASSWORD_LENGTH)
+    setPasswordsMatch(formData.password === formData.confirmPassword && formData.confirmPassword !== "")
+  }, [formData.password, formData.confirmPassword])
 
   const particlesInit = useCallback(async (engine: Engine) => {
     await loadSlim(engine)
@@ -79,24 +85,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       return
     }
 
-    if (authMode === "signup" && formData.password !== formData.confirmPassword) {
-      toast("Passwords do not match", {
-        description: "Please ensure both passwords are identical.",
-      })
-      return
+    if (authMode === "signup") {
+      // Frontend validation
+      if (!passwordLengthValid) {
+        toast.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+        return
+      }
+
+      if (!passwordsMatch) {
+        toast.error("Passwords don't match")
+        return
+      }
     }
+
+    setIsSubmitting(true)
 
     try {
       if (authMode === "login") {
         const response = await login(formData.email, formData.password)
         onLoginSuccess(response)
       } else if (authMode === "signup") {
-        await registerUser(
-          formData.email,
-          formData.password,
-          formData.organization,
-          formData.role
-        )
+        await registerUser(formData.email, formData.password, formData.organization, formData.role)
         toast("User registered successfully!", {
           description: "You can proceed by signing in.",
         })
@@ -121,8 +130,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         description: toastDescription,
         duration: 4000, // 4secs
       })
+    } finally {
+      setIsSubmitting(false)
     }
+  }
 
+  const resetForm = () => {
     setFormData({
       email: "",
       password: "",
@@ -130,6 +143,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       organization: "",
       role: "",
     })
+  }
+
+  // When changing auth mode, reset the form
+  const changeAuthMode = (mode: AuthMode) => {
+    resetForm()
+    setAuthMode(mode)
   }
 
   return (
@@ -149,7 +168,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 resize: true,
               },
               modes: {
-                attract: { distance: 200, duration: 0.8, speed: 3.2 },
+                attract: { distance: 200, duration: 0.8, speed: 2.7 },
                 push: { quantity: 4 },
               },
             },
@@ -167,7 +186,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 enable: true,
                 outModes: { default: "bounce" },
                 random: false,
-                speed: 1,
+                speed: 0.2,
                 straight: false,
               },
               number: { density: { enable: true, area: 800 }, value: 100 },
@@ -183,32 +202,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
       {/* Logo and Text Area */}
       <div className="hidden md:flex md:w-3/4 relative z-10 justify-center items-center">
-  <div className="p-8 text-center">
-    <img
-      src="/SurveyAcceleratorLogo-White.svg"
-      alt="Survey Accelerator Logo"
-      className="w-[850px] h-auto mb-4"
-    />
-    <p className="text-2xl max-w-3xl mx-auto text-white">
-      A search engine for the highest quality surveys at your fingertips
-      <br />
-      <span className="text-yellow-500">Free, fast and completely open source </span>
-    </p>
-  </div>
-</div>
-
-
+        <div className="p-8 text-center">
+          <img src="/SurveyAcceleratorLogo-White.svg" alt="Survey Accelerator Logo" className="w-[850px] h-auto mb-4" />
+          <p className="text-2xl max-w-3xl mx-auto text-white">
+            A search engine for the highest quality surveys at your fingertips
+            <br />
+            <span className="text-yellow-500">Free, fast and completely open source </span>
+          </p>
+        </div>
+      </div>
 
       {/* Form Side */}
       <div className="w-full md:w-1/3 flex items-center justify-center p-4 md:p-8 relative z-10">
         <Card className="w-full max-w-md border-none bg-black/20 backdrop-blur-sm shadow-xl text-white">
           <CardHeader>
             <CardTitle className="text-center text-2xl">
-              {authMode === "login"
-                ? "Sign In"
-                : authMode === "signup"
-                ? "Sign Up"
-                : "Reset Password"}
+              {authMode === "login" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
             </CardTitle>
             {authMode === "forgot" && (
               <CardDescription className="text-center">
@@ -273,7 +282,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
               {/* Password Field */}
               {authMode !== "forgot" && (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="password" className="text-white">
                     Password
                   </Label>
@@ -285,14 +294,30 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="text-white"
+                    className={`text-white ${
+                      authMode === "signup" && formData.password && !passwordLengthValid ? "border-red-500" : ""
+                    }`}
                   />
+                  {authMode === "signup" && formData.password && (
+                    <p
+                      className={`text-xs flex items-center mt-1 ${
+                        passwordLengthValid ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
+                      {passwordLengthValid ? (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                      )}
+                      Password must be at least {MIN_PASSWORD_LENGTH} characters
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* For Signup: Confirm Password Field */}
               {authMode === "signup" && (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="confirmPassword" className="text-white">
                     Confirm Password
                   </Label>
@@ -304,32 +329,40 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
-                    className="text-white"
+                    className={`text-white ${formData.confirmPassword && !passwordsMatch ? "border-red-500" : ""}`}
                   />
+                  {formData.confirmPassword && (
+                    <p
+                      className={`text-xs flex items-center mt-1 ${passwordsMatch ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {passwordsMatch ? (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {passwordsMatch ? "Passwords match" : "Passwords don't match"}
+                    </p>
+                  )}
                 </div>
               )}
 
               <Button
                 type="submit"
                 className="w-full bg-white text-black"
-                disabled={authMode === "forgot" && isResetting}
+                disabled={
+                  (authMode === "forgot" && isResetting) ||
+                  isSubmitting ||
+                  (authMode === "signup" && (!passwordLengthValid || !passwordsMatch))
+                }
               >
-                {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {authMode === "login"
-                  ? "Sign In"
-                  : authMode === "signup"
-                  ? "Sign Up"
-                  : "Reset Password"}
+                {(isResetting || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {authMode === "login" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             {authMode === "login" && (
-              <Button
-                variant="link"
-                className="px-0 text-white"
-                onClick={() => setAuthMode("forgot")}
-              >
+              <Button variant="link" className="px-0 text-white" onClick={() => changeAuthMode("forgot")}>
                 Forgot Password?
               </Button>
             )}
@@ -337,40 +370,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             <div className="text-center w-full">
               {authMode === "login" ? (
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-white">
-                    Don't have an account?
-                  </span>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-white"
-                    onClick={() => setAuthMode("signup")}
-                  >
+                  <span className="text-sm text-white">Don't have an account?</span>
+                  <Button variant="link" className="p-0 h-auto text-white" onClick={() => changeAuthMode("signup")}>
                     Sign Up
                   </Button>
                 </div>
               ) : authMode === "signup" ? (
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-white">
-                    Already have an account?
-                  </span>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-white"
-                    onClick={() => setAuthMode("login")}
-                  >
+                  <span className="text-sm text-white">Already have an account?</span>
+                  <Button variant="link" className="p-0 h-auto text-white" onClick={() => changeAuthMode("login")}>
                     Sign In
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-white">
-                    Remembered your password?
-                  </span>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-white"
-                    onClick={() => setAuthMode("login")}
-                  >
+                  <span className="text-sm text-white">Remembered your password?</span>
+                  <Button variant="link" className="p-0 h-auto text-white" onClick={() => changeAuthMode("login")}>
                     Sign In
                   </Button>
                 </div>

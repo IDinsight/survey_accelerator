@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.auth.dependencies import authenticate_user
 from app.database import get_async_session
 from app.search.models import log_search
@@ -6,8 +9,6 @@ from app.search.schemas import GenericSearchRequest, GenericSearchResponse
 from app.search.utils import hybrid_search
 from app.users.models import UsersDB
 from app.utils import setup_logger
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = setup_logger()
 
@@ -116,7 +117,12 @@ async def search_generic(
         )
 
         # Log the search
-        await log_search(session, request.query, response.model_dump_json())
+        await log_search(
+            session,
+            user=user,
+            query=request.query,
+            search_response=response.model_dump_json(),
+        )
 
         return response
 

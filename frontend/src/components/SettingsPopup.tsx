@@ -1,14 +1,15 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Slider } from "./ui/slider"
 import { toast } from "sonner"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from "lucide-react"
+import { changePassword, updateResultsCountPreference } from "../api"
 
 interface User {
   email: string
@@ -22,6 +23,8 @@ interface SettingsPopupProps {
   resultsCount: number
 }
 
+const MIN_PASSWORD_LENGTH = 8
+
 const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateResultsCount, resultsCount }) => {
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
@@ -30,15 +33,38 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [localResultsCount, setLocalResultsCount] = useState(resultsCount)
 
+  // Password validation states
+  const [passwordLengthValid, setPasswordLengthValid] = useState(false)
+  const [passwordsMatch, setPasswordsMatch] = useState(false)
+  const [currentPasswordValid, setCurrentPasswordValid] = useState(false)
+
   // Ensure user object has required properties
   const safeUser = {
     email: user?.email || "Not available",
   }
 
+  // Validate password on change
+  useEffect(() => {
+    setPasswordLengthValid(newPassword.length >= MIN_PASSWORD_LENGTH)
+    setPasswordsMatch(newPassword === confirmPassword && confirmPassword !== "")
+    setCurrentPasswordValid(currentPassword.length >= MIN_PASSWORD_LENGTH)
+  }, [newPassword, confirmPassword, currentPassword])
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (newPassword !== confirmPassword) {
+    // Frontend validation
+    if (!currentPasswordValid) {
+      toast.error(`Current password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+      return
+    }
+
+    if (!passwordLengthValid) {
+      toast.error(`New password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+      return
+    }
+
+    if (!passwordsMatch) {
       toast.error("New passwords don't match")
       return
     }
@@ -46,43 +72,17 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
     setIsSubmitting(true)
 
     try {
-      // Use the correct endpoint from your FastAPI backend
-      const response = await fetch("http://localhost:8000/users/change-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      })
+      // Use the API function to change password
+      const response = await changePassword(currentPassword, newPassword)
 
-      // Handle non-JSON responses
-      const contentType = response.headers.get("content-type")
-      let errorMessage = "Failed to change password"
-
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json()
-        if (!response.ok) {
-          errorMessage = data.detail || errorMessage
-          throw new Error(errorMessage)
-        }
-
-        // Success path
-        toast.success(data.message || "Password changed successfully")
-        setCurrentPassword("")
-        setNewPassword("")
-        setConfirmPassword("")
-        setShowPasswordChange(false)
-      } else {
-        // Handle non-JSON response (like HTML error pages)
-        const text = await response.text()
-        console.error("Non-JSON response:", text)
-        throw new Error("Server returned an invalid response. Please try again later.")
-      }
+      // Success path
+      toast.success(response.message || "Password changed successfully")
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      setShowPasswordChange(false)
     } catch (error: any) {
+      // Display error message
       toast.error(error.message || "Failed to change password")
       console.error("Password change error:", error)
     } finally {
@@ -99,28 +99,23 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
       // Save to localStorage as a fallback
       localStorage.setItem("resultsCount", localResultsCount.toString())
 
-      // Save to backend if you have an API endpoint for it
-      const response = await fetch("http://localhost:8000/users/preferences", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          results_count: localResultsCount,
-        }),
-      }).catch((err) => {
-        console.error("Failed to save preferences to server:", err)
-        // Continue even if server save fails
-        return null
-      })
+      try {
+        // Use the API function to update results count preference
+        const response = await updateResultsCountPreference(localResultsCount)
+        console.log("Preferences saved successfully:", response)
+      } catch (serverError: any) {
+        // Log error but continue (we have localStorage as backup)
+        console.warn("Could not save preferences to server:", serverError)
+      }
 
       // Update local state
       onUpdateResultsCount(localResultsCount)
       toast.success(`Results count updated to ${localResultsCount}`)
-    } catch (error) {
+    } catch (error: any) {
+      // Ensure we're displaying a string message, not an object
+      const errorMessage = error instanceof Error ? error.message : "Failed to save preferences"
+      toast.error(errorMessage)
       console.error("Error saving preferences:", error)
-      toast.error("Failed to save preferences")
     }
   }
 
@@ -160,9 +155,17 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="bg-black/30 border-gray-700"
+                    className={`bg-black/30 border-gray-700 ${
+                      currentPassword && !currentPasswordValid ? "border-red-500" : ""
+                    }`}
                     required
                   />
+                  {currentPassword && !currentPasswordValid && (
+                    <p className="text-xs text-red-400 flex items-center mt-1">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Password must be at least {MIN_PASSWORD_LENGTH} characters
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -172,9 +175,23 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-black/30 border-gray-700"
+                    className={`bg-black/30 border-gray-700 ${
+                      newPassword && !passwordLengthValid ? "border-red-500" : ""
+                    }`}
                     required
                   />
+                  {newPassword && (
+                    <p
+                      className={`text-xs flex items-center mt-1 ${passwordLengthValid ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {passwordLengthValid ? (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                      )}
+                      Password must be at least {MIN_PASSWORD_LENGTH} characters
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -184,12 +201,30 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-black/30 border-gray-700"
+                    className={`bg-black/30 border-gray-700 ${
+                      confirmPassword && !passwordsMatch ? "border-red-500" : ""
+                    }`}
                     required
                   />
+                  {confirmPassword && (
+                    <p
+                      className={`text-xs flex items-center mt-1 ${passwordsMatch ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {passwordsMatch ? (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {passwordsMatch ? "Passwords match" : "Passwords don't match"}
+                    </p>
+                  )}
                 </div>
 
-                <Button type="submit" className="w-full bg-[#CC7722] hover:bg-[#b88a01]" disabled={isSubmitting}>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#CC7722] hover:bg-[#b88a01]"
+                  disabled={isSubmitting || !passwordLengthValid || !passwordsMatch || !currentPasswordValid}
+                >
                   {isSubmitting ? "Changing..." : "Change Password"}
                 </Button>
               </form>
