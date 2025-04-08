@@ -1,11 +1,11 @@
 "use client"
 
 import type { FC } from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent } from "./ui/card"
 import type { DocumentSearchResult } from "../interfaces"
 import { getMatchStrength } from "../interfaces"
-import { MapPin, Building, FileSearch } from "lucide-react"
+import { MapPin, Building, FileSearch } from 'lucide-react'
 
 interface SearchResultCardProps {
   result: DocumentSearchResult
@@ -51,15 +51,6 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
   // Count strong matches for display
   const strongMatchesCount = matchesWithStrength.filter((m) => m.strength === "strong").length
 
-  // Update expansion state when selection changes
-  useEffect(() => {
-    if (isSelected && !isExpanded) {
-      setIsExpanded(true)
-    } else if (!isSelected) {
-      setIsExpanded(false)
-    }
-  }, [isSelected])
-
   // Function to truncate text with ellipsis if it's too long
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return "N/A"
@@ -80,14 +71,13 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
       // If already selected, toggle expansion
       setIsExpanded(!isExpanded)
     } else {
-      // If not selected, select it and expand
+      // If not selected, select it but don't expand automatically
       onClick(result)
-      setIsExpanded(true)
     }
   }
 
   return (
-    <div className="mb-6">
+    <div>
       <Card
         onClick={handleCardClick}
         className={`cursor-pointer transition-all duration-200 border-0 backdrop-blur-sm ${
@@ -132,7 +122,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           <p className="text-sm text-white/90 mt-1 mb-3">{result.metadata.summary || "No summary available"}</p>
 
           {/* Badge now at the bottom right */}
-          <div className="flex justify-end ">
+          <div className="flex justify-end">
             <div
               className={`
                 flex items-center gap-1 px-2 py-1 rounded-md -mb-3.5
@@ -154,7 +144,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
       {isSelected && isExpanded && result.matches.length > 0 && (
         <div
           id={`matches-${result.metadata.id}`}
-          className="mt-1 transition-all duration-300 max-h-[300px] overflow-y-auto space-y-2 pt-2 custom-scrollbar"
+          className="mt-1 transition-all duration-300 max-h-[300px] overflow-y-auto space-y-1.5 pt-1.5 custom-scrollbar"
           style={{ marginTop: "4px" }}
         >
           {matchesWithStrength.map((match, index) => {

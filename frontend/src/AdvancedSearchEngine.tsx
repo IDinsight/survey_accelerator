@@ -52,19 +52,11 @@ const AdvancedSearchEngine: React.FC = () => {
 
       setSearchResults(sortedResults)
 
-      if (sortedResults.length > 0) {
-        const topResult = sortedResults[0]
-        if (topResult.metadata.highlighted_pdf_url) {
-          setSelectedPDF(topResult.metadata.highlighted_pdf_url)
-        } else {
-          setSelectedPDF(topResult.metadata.pdf_url ?? null)
-        }
-        setSelectedCardId(topResult.metadata.id)
-        if (topResult.matches.length > 0) {
-          setCurrentPageNumber(topResult.matches[0].page_number)
-          setSelectedHighlightedId(topResult.matches[0].rank)
-        }
-      }
+      // Don't set any PDF or selection states - wait for user to select a card
+      setSelectedPDF(null)
+      setSelectedCardId(null)
+      setCurrentPageNumber(null)
+      setSelectedHighlightedId(null)
     } catch (error: any) {
       if (error instanceof Error) {
         toast(error.message, {
@@ -106,32 +98,36 @@ const AdvancedSearchEngine: React.FC = () => {
     <IslandLayout>
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
-        <div className="p-6  overflow-y-auto custom-scrollbar">
-          <div className="mb-6">
+        <div className="p-6 overflow-y-auto custom-scrollbar">
+          <div className="mb-2">
             <img
               src="/SurveyAcceleratorLogo-White.svg"
               alt="Banner"
               className="w-full h-auto object-cover mb-4 rounded-lg"
             />
             {/* Search form with glass effect */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4 mb-6">
+            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4">
               <SearchForm onSubmit={handleSearch} loading={loading} />
             </div>
           </div>
 
           {/* Search results without glass effect */}
           <div>
-            {searchResults.length > 0 && <h3 className="text-xl font-semibold text-white mb-3">Search Results:</h3>}
-            {searchResults.map((result) => (
-              <SearchResultCard
-                key={result.metadata.id}
-                result={result}
-                onClick={handleCardClick}
-                isSelected={selectedCardId === result.metadata.id}
-                onMatchClick={handleMatchClick}
-                selectedHighlightedId={selectedHighlightedId}
-              />
-            ))}
+            {searchResults.length > 0 && (
+              <h3 className="text-xl font-semibold text-white mb-2 text-center">Top Documents</h3>
+            )}
+            <div className="space-y-3">
+              {searchResults.map((result) => (
+                <SearchResultCard
+                  key={result.metadata.id}
+                  result={result}
+                  onClick={handleCardClick}
+                  isSelected={selectedCardId === result.metadata.id}
+                  onMatchClick={handleMatchClick}
+                  selectedHighlightedId={selectedHighlightedId}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
