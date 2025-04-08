@@ -146,13 +146,13 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
       {/* Search Query Input */}
       <div>
         <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
-          Search Query
+          Search Configuration
         </Label>
         <Input
           id="search"
           name="search"
           type="text"
-          placeholder="Enter your search query"
+          placeholder="Enter your query"
           className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
           required
         />
