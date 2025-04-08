@@ -106,7 +106,7 @@ const AdvancedSearchEngine: React.FC = () => {
     <IslandLayout>
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <div className="p-6  overflow-y-auto custom-scrollbar">
           <div className="mb-6">
             <img
               src="/SurveyAcceleratorLogo-White.svg"
