@@ -194,7 +194,6 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Searching...</span>
             </>
           ) : (
             <span>Search</span>
