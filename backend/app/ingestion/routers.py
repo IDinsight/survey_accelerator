@@ -48,9 +48,9 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
     ]
 
     # Limit to 15 records for development
-    # missing_records = (
-    #     missing_records[:10] if len(missing_records) > 5 else missing_records
-    # )
+    missing_records = (
+        missing_records[:15] if len(missing_records) > 5 else missing_records
+    )
 
     logger.info(f"Found {len(missing_records)} records to process")
 
@@ -198,4 +198,3 @@ async def get_documents_grouped_by_organization(
     return_list = list(org_docs_map.values())
     # Print total number of docs
     return return_list
-

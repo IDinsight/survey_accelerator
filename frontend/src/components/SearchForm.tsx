@@ -5,10 +5,12 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown, Loader2 } from "lucide-react"
+import { Check, ChevronDown, Loader2, Clock, X } from "lucide-react"
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
+import axios from "axios"
+import { toast } from "sonner"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -140,11 +142,80 @@ const surveytypes = [
 const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showHistory, setShowHistory] = useState(false)
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const historyRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
+
+  // Handle clicks outside the history dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (historyRef.current && !historyRef.current.contains(event.target as Node)) {
+        setShowHistory(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  const fetchSearchHistory = async () => {
+    setLoadingHistory(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found")
+      }
+
+      const response = await axios.get(`${backendUrl}/search/search-history`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      setSearchHistory(response.data || [])
+    } catch (error) {
+      console.error("Error fetching search history:", error)
+      toast.error("Failed to load search history")
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const handleHistoryClick = () => {
+    if (!showHistory) {
+      fetchSearchHistory()
+    }
+    setShowHistory(!showHistory)
+    if (onHistoryClick) {
+      onHistoryClick()
+    }
+  }
+
+  const handleHistoryItemClick = (query: string) => {
+    setSearchQuery(query)
+    setShowHistory(false)
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    onSubmit(e)
+    setShowHistory(false)
+  }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Search Query Input */}
-      <div>
+      <div className="relative">
         <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
           Search Query
         </Label>
@@ -155,6 +226,9 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           placeholder="Enter your search query"
           className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
           required
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          ref={searchInputRef}
         />
       </div>
 
@@ -194,6 +268,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Searching...</span>
             </>
           ) : (
             <span>Search</span>
@@ -205,8 +280,10 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
             <TooltipTrigger asChild>
               <Button
                 type="button"
-                onClick={onHistoryClick}
-                className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
+                onClick={handleHistoryClick}
+                className={`w-[13.5%] ${
+                  showHistory ? "bg-[#a05e1b]" : "bg-[#cc7722]"
+                } text-white flex flex-col items-center justify-center p-2`}
               >
                 <YoutubeSearchedForIcon className="w-20 h-20" />
               </Button>
@@ -217,6 +294,47 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      {/* Search History Dropdown */}
+      {showHistory && (
+        <div
+          ref={historyRef}
+          className="absolute z-[100] mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg"
+          style={{ marginTop: "0.5rem" }}
+        >
+          <div className="flex justify-between items-center py-2 px-3 text-sm font-medium text-white border-b border-gray-700">
+            <span>Recent Searches</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-transparent"
+              onClick={() => setShowHistory(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {loadingHistory ? (
+              <div className="flex justify-center items-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-white/70" />
+              </div>
+            ) : searchHistory.length > 0 ? (
+              searchHistory.map((query, index) => (
+                <div
+                  key={index}
+                  className="flex items-center py-2 px-3 text-sm text-white hover:bg-[#1e1e4a] cursor-pointer"
+                  onClick={() => handleHistoryItemClick(query)}
+                >
+                  <Clock className="h-4 w-4 mr-2 text-white/70" />
+                  <span className="truncate">{query}</span>
+                </div>
+              ))
+            ) : (
+              <div className="py-3 px-3 text-sm text-white/70 text-center">No recent searches</div>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   )
 }
