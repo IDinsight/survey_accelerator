@@ -5,12 +5,13 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown, Loader2, Clock, X } from "lucide-react"
+import { Check, ChevronDown, Loader2, Clock, X, Search } from "lucide-react"
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 import axios from "axios"
 import { toast } from "sonner"
+import "../styles/dropdown.css"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -28,7 +29,7 @@ const CustomCheckbox: FC<{
   return (
     <div
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-[#1e1e4a]",
+        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-white/15 dropdown-item",
         disabled && "opacity-50 cursor-not-allowed",
       )}
       onClick={() => {
@@ -78,8 +79,12 @@ const CustomDropdown: FC<{
     }
   }
 
+  const clearAll = () => {
+    onChange([])
+  }
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="dropdown-container" ref={dropdownRef}>
       <Button
         type="button"
         variant="outline"
@@ -95,9 +100,21 @@ const CustomDropdown: FC<{
       </Button>
 
       {isOpen && (
-        <div className="absolute z-[100] mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg">
-          <div className="py-2 px-3 text-sm font-medium text-white">{label}</div>
-          <div className="border-t border-gray-700"></div>
+        <div className="dropdown-menu">
+          <div className="flex items-center justify-between py-2 px-3 text-sm font-medium text-white">
+            <span>{label}</span>
+            {selectedOptions.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-white hover:bg-white/10"
+                onClick={clearAll}
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
+          <div className="border-t border-white/20"></div>
           <div className="max-h-[300px] overflow-y-auto">
             {options.map((option) => (
               <CustomCheckbox
@@ -139,6 +156,7 @@ const surveytypes = [
   "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
 ]
 
+
 const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
@@ -153,7 +171,11 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
   // Handle clicks outside the history dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (historyRef.current && !historyRef.current.contains(event.target as Node)) {
+      if (
+        historyRef.current &&
+        !historyRef.current.contains(event.target as Node) &&
+        !(event.target as Element).closest(".history-button")
+      ) {
         setShowHistory(false)
       }
     }
@@ -212,28 +234,83 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
     setShowHistory(false)
   }
 
+  const handleClear = () => {
+    setSearchQuery("")
+    setSelectedOrgs([])
+    setSelectedSurveyTypes([])
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Search Query Input */}
-      <div className="relative">
-        <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
+      <div className="dropdown-container">
+        <Label htmlFor="search" className="block text-sm font-medium text-white">
           Search Query
         </Label>
-        <Input
-          id="search"
-          name="search"
-          type="text"
-          placeholder="Enter your search query"
-          className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
-          required
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          ref={searchInputRef}
-        />
+        <div className="relative mt-1">
+          <Input
+            id="search"
+            name="search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Enter your search query"
+            className="pr-10 text-white placeholder-white/70 focus-visible:ring-transparent"
+            required
+            ref={searchInputRef}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-0 flex items-center pr-3"
+            >
+              <X className="h-4 w-4 text-white/70" />
+            </button>
+          )}
+        </div>
+
+        {/* Search History Dropdown */}
+        {showHistory && (
+          <div ref={historyRef} className="history-dropdown">
+            <div className="flex justify-between items-center py-2 px-3 text-sm font-medium text-white border-b border-white/20">
+              <span>Recent Searches</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-transparent"
+                onClick={() => setShowHistory(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {loadingHistory ? (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-white/70" />
+                </div>
+              ) : searchHistory.length > 0 ? (
+                searchHistory.map((query, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center py-2 px-3 text-sm text-white hover:bg-white/10 cursor-pointer dropdown-item"
+                    onClick={() => handleHistoryItemClick(query)}
+                  >
+                    <Clock className="h-4 w-4 mr-2 text-white/70" />
+                    <span className="truncate">{query}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-3 px-3 text-sm text-white/70 text-center">No recent searches</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Organizations Dropdown */}
       <div>
+        <Label className="block text-sm font-medium text-white mb-1">Organizations</Label>
         <CustomDropdown
           options={organizations}
           selectedOptions={selectedOrgs}
@@ -247,6 +324,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
 
       {/* Survey Type Dropdown */}
       <div>
+        <Label className="block text-sm font-medium text-white mb-1">Survey Types</Label>
         <CustomDropdown
           options={surveytypes}
           selectedOptions={selectedSurveyTypes}
@@ -259,19 +337,22 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
       </div>
 
       {/* Submit and History Buttons */}
-      <div className="flex items-stretch mt-4 gap-3.5">
+      <div className="flex items-stretch mt-4 gap-3">
         <Button
           type="submit"
-          className="relative w-[83%] bg-white text-black flex items-center justify-center"
+          className="relative flex-1 bg-white text-black hover:bg-gray-200 flex items-center justify-center"
           disabled={loading}
         >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Searching...</span>
+              Searching...
             </>
           ) : (
-            <span>Search</span>
+            <>
+              <Search className="mr-2 h-4 w-4" />
+              Search
+            </>
           )}
         </Button>
 
@@ -281,11 +362,11 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
               <Button
                 type="button"
                 onClick={handleHistoryClick}
-                className={`w-[13.5%] ${
+                className={`w-12 ${
                   showHistory ? "bg-[#a05e1b]" : "bg-[#cc7722]"
-                } text-white flex flex-col items-center justify-center p-2`}
+                } text-white hover:bg-[#b88a01] flex items-center justify-center history-button`}
               >
-                <YoutubeSearchedForIcon className="w-20 h-20" />
+                <YoutubeSearchedForIcon className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -293,48 +374,24 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div>
 
-      {/* Search History Dropdown */}
-      {showHistory && (
-        <div
-          ref={historyRef}
-          className="absolute z-[100] mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg"
-          style={{ marginTop: "0.5rem" }}
-        >
-          <div className="flex justify-between items-center py-2 px-3 text-sm font-medium text-white border-b border-gray-700">
-            <span>Recent Searches</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-transparent"
-              onClick={() => setShowHistory(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="max-h-[300px] overflow-y-auto">
-            {loadingHistory ? (
-              <div className="flex justify-center items-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-white/70" />
-              </div>
-            ) : searchHistory.length > 0 ? (
-              searchHistory.map((query, index) => (
-                <div
-                  key={index}
-                  className="flex items-center py-2 px-3 text-sm text-white hover:bg-[#1e1e4a] cursor-pointer"
-                  onClick={() => handleHistoryItemClick(query)}
-                >
-                  <Clock className="h-4 w-4 mr-2 text-white/70" />
-                  <span className="truncate">{query}</span>
-                </div>
-              ))
-            ) : (
-              <div className="py-3 px-3 text-sm text-white/70 text-center">No recent searches</div>
-            )}
-          </div>
-        </div>
-      )}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={handleClear}
+                className="w-12 bg-gray-600 text-white hover:bg-gray-700 flex items-center justify-center"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Clear all filters</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     </form>
   )
 }

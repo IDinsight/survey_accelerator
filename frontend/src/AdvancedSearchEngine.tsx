@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import SearchForm from "./components/SearchForm"
 import SearchResultCard from "./components/SearchResultCard"
@@ -12,9 +12,10 @@ import FAQModal from "./components/FAQModal"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
-import { LogOut, Settings, HelpCircle } from 'lucide-react'
+import { LogOut, Settings, HelpCircle } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
+import "./styles/dropdown.css"
 
 interface User {
   email: string
@@ -154,9 +155,9 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
       if (showSettings) {
         // We're checking if the click target is not within any element with class "settings-modal-content"
         // This assumes we'll add this class to the Card in SettingsPopup
-        const isClickOutside = !(event.target as Element).closest('.settings-modal-content');
+        const isClickOutside = !(event.target as Element).closest(".settings-modal-content")
         if (isClickOutside) {
-          setShowSettings(false);
+          setShowSettings(false)
         }
       }
     }
@@ -230,13 +231,13 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
             </div>
 
             {/* Search form with glass effect */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4">
+            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4 search-form-container">
               <SearchForm onSubmit={handleSearch} loading={loading} />
             </div>
           </div>
 
           {/* Search results without glass effect */}
-          <div>
+          <div className="results-container">
             {searchResults.length > 0 && <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>}
             <div className="space-y-3">
               {searchResults.map((result) => (
