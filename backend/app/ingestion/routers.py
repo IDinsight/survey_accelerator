@@ -1,17 +1,21 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter
-
 from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,
     get_missing_document_ids,
 )
 from app.ingestion.fetch_utils.google_drive_utils import download_all_files
-from app.ingestion.models import save_all_to_db
+from app.ingestion.models import DocumentDB, save_all_to_db
 from app.ingestion.process_utils.embedding_utils import process_files
-from app.ingestion.schemas import AirtableIngestionResponse
+from app.ingestion.schemas import AirtableIngestionResponse, DocumentPreview
 from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_gcp
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from ..database import get_async_session
+from .schemas import OrganizationDocuments
 
 logger = logging.getLogger(__name__)
 
@@ -102,3 +106,96 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
         total_chunks_created=total_chunks_created,
         message=f"Ingestion completed. Processed {len(saved_files)} documents.",
     )
+
+
+@router.get("/view-ingested-documents", response_model=list[OrganizationDocuments])
+async def view_documents_grouped(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Retrieves all ingested documents grouped by their organization in alphabetical order.
+    For each document it returns:
+
+    - **Preview Link:** A link to preview the document (preferring pdf_url if available, then drive_link)
+    - **Year:** The year the document was made
+    - **Description:** The summary/description of the document
+    - **Countries:** The countries related to the document
+    - **Regions:** The regions related to the document
+
+    Documents within each organization are sorted in alphabetical order (by title or file name).
+    """
+    organizations = await get_documents_grouped_by_organization(session)
+    if not organizations:
+        raise HTTPException(status_code=404, detail="No documents found.")
+
+    # Sort documents within each organization by title or file name
+    for org in organizations:
+        org.documents.sort(key=lambda doc: (doc.title or doc.file_name).lower())
+    # Additionally, sort the organization groups alphabetically by organization name
+    organizations.sort(key=lambda org: org.organization.lower())
+    return organizations
+
+
+async def get_documents_grouped_by_organization(
+    session: AsyncSession,
+) -> list[OrganizationDocuments]:
+    """
+    Retrieves distinct document preview rows (one per document_id) from the database,
+    then groups them by their organization (always taking the first element of the organizations list).
+
+    This approach avoids duplicate rows from the chunked table.
+    """
+    # Use DISTINCT ON approach: here we order by document_id and created_datetime_utc (descending)
+    # so that we pick the most recent row per document.
+    query = (
+        select(
+            DocumentDB.document_id,
+            DocumentDB.file_name,
+            DocumentDB.pdf_url,
+            DocumentDB.summary,
+            DocumentDB.year,
+            DocumentDB.countries,
+            DocumentDB.regions,
+            DocumentDB.title,
+            DocumentDB.organizations,
+        )
+        .distinct(DocumentDB.document_id)
+        .order_by(DocumentDB.document_id, DocumentDB.created_datetime_utc.desc())
+    )
+    result = await session.execute(query)
+    rows = result.all()
+
+    org_docs_map: dict[str, OrganizationDocuments] = {}
+
+    for row in rows:
+        # Each row is a Row object; access its columns via _mapping.
+        data = row._mapping
+
+        organizations = data.get("organizations")
+        # Always take the first organization value; default to "Unknown" if missing or empty.
+        org_name = (
+            organizations[0]
+            if isinstance(organizations, list) and organizations
+            else "Unknown"
+        )
+
+        if org_name not in org_docs_map:
+            org_docs_map[org_name] = OrganizationDocuments(
+                organization=org_name,
+                documents=[],
+            )
+
+        doc_preview = DocumentPreview(
+            title=data.get("title"),
+            file_name=data.get("file_name"),
+            preview_link=data.get("pdf_url"),
+            year=data.get("year"),
+            description=data.get("summary"),
+            countries=data.get("countries"),
+            regions=data.get("regions"),
+        )
+        org_docs_map[org_name].documents.append(doc_preview)
+    return_list = list(org_docs_map.values())
+    # Print total number of docs
+    return return_list
+
