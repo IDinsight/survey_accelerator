@@ -132,6 +132,21 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     user_id: Number.parseInt(localStorage.getItem("user_id") || "0", 10),
   }
 
+  // Default logout handler if none is provided
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout()
+    } else {
+      // Default logout behavior
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      localStorage.removeItem("email")
+      localStorage.removeItem("user_id")
+      // Redirect to login page
+      window.location.href = "/login"
+    }
+  }
+
   return (
     <IslandLayout>
       {showSettings && (
@@ -148,35 +163,46 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
-          <div className="mb-3">
-            <div className="flex justify-between items-center mb-4">
+          <div className="mb-2">
+            {/* Logo */}
+            <div className="mb-1">
               <img
                 src="/SurveyAcceleratorLogo-White.svg"
-                alt="Banner"
-                className="w-4/5 h-auto object-cover rounded-lg"
+                alt="Survey Accelerator"
+                className="w-4/5 h-auto object-cover"
               />
-              <div className="flex gap-2">
+            </div>
+
+            {/* Icons row - very compact */}
+            <div className="flex justify-end mb-2">
+              <div className="flex gap-1">
                 <Button
                   onClick={() => setShowFAQ(true)}
                   variant="ghost"
-                  className="text-white hover:bg-white/10"
+                  size="sm"
+                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
                   title="Help"
                 >
-                  <HelpCircle className="h-5 w-5" />
+                  <HelpCircle className="h-4 w-4" />
                 </Button>
                 <Button
                   onClick={() => setShowSettings(true)}
                   variant="ghost"
-                  className="text-white hover:bg-white/10"
+                  size="sm"
+                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
                   title="Settings"
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-4 w-4" />
                 </Button>
-                {onLogout && (
-                  <Button onClick={onLogout} variant="ghost" className="text-white hover:bg-white/10" title="Logout">
-                    <LogOut className="h-5 w-5" />
-                  </Button>
-                )}
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
