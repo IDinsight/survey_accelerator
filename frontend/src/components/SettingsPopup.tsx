@@ -8,7 +8,7 @@ import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Slider } from "./ui/slider"
 import { toast } from "sonner"
-import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from "lucide-react"
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { changePassword, updateResultsCountPreference } from "../api"
 
 interface User {
@@ -121,7 +121,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <Card className="w-[90%] max-w-md bg-black/30 backdrop-blur-sm text-white border-0">
+      <Card className="w-[90%] max-w-md bg-black/30 backdrop-blur-sm text-white border-0 settings-modal-content">
         <CardHeader className="pb-2">
           <CardTitle>Settings</CardTitle>
           <CardDescription className="text-gray-300">Manage your account and preferences</CardDescription>
@@ -222,7 +222,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#CC7722] hover:bg-[#b88a01]"
+                  className="w-full bg-white text-black hover:bg-gray-200"
                   disabled={isSubmitting || !passwordLengthValid || !passwordsMatch || !currentPasswordValid}
                 >
                   {isSubmitting ? "Changing..." : "Change Password"}
@@ -254,7 +254,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
               </div>
             </div>
 
-            <Button onClick={saveResultsCount} className="w-full bg-[#CC7722] hover:bg-[#b88a01] mt-2">
+            <Button onClick={saveResultsCount} className="w-full bg-white text-black hover:bg-gray-200 mt-2">
               Save Preferences
             </Button>
           </div>

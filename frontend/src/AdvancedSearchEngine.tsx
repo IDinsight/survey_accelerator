@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import SearchForm from "./components/SearchForm"
 import SearchResultCard from "./components/SearchResultCard"
@@ -12,7 +12,7 @@ import FAQModal from "./components/FAQModal"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
-import { LogOut, Settings, HelpCircle } from "lucide-react"
+import { LogOut, Settings, HelpCircle } from 'lucide-react'
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 
@@ -147,6 +147,26 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     }
   }
 
+  // Handle clicks outside the settings panel
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Check if settings is open and the click is outside any modal content
+      if (showSettings) {
+        // We're checking if the click target is not within any element with class "settings-modal-content"
+        // This assumes we'll add this class to the Card in SettingsPopup
+        const isClickOutside = !(event.target as Element).closest('.settings-modal-content');
+        if (isClickOutside) {
+          setShowSettings(false);
+        }
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showSettings])
+
   return (
     <IslandLayout>
       {showSettings && (
@@ -164,45 +184,48 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <div className="mb-2">
-            {/* Logo */}
-            <div className="mb-1">
-              <img
-                src="/SurveyAcceleratorLogo-White.svg"
-                alt="Survey Accelerator"
-                className="w-4/5 h-auto object-cover"
-              />
-            </div>
+            {/* Logo and icons in a single row */}
+            <div className="flex flex-col mb-2">
+              {/* Full-width logo */}
+              <div className="w-full mb-1">
+                <img
+                  src="/SurveyAcceleratorLogo-White.svg"
+                  alt="Survey Accelerator"
+                  className="w-full h-auto object-contain"
+                />
+              </div>
 
-            {/* Icons row - very compact */}
-            <div className="flex justify-end mb-2">
-              <div className="flex gap-1">
-                <Button
-                  onClick={() => setShowFAQ(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                  title="Help"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => setShowSettings(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                  title="Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={handleLogout}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                  title="Logout"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
+              {/* Icons row - very compact */}
+              <div className="flex justify-end">
+                <div className="flex gap-1">
+                  <Button
+                    onClick={() => setShowFAQ(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Help"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => setShowSettings(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleLogout}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
