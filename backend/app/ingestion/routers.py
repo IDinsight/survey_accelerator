@@ -1,6 +1,10 @@
 import asyncio
 import logging
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
 from app.ingestion.fetch_utils.airtable_utils import (
     get_airtable_records,
     get_missing_document_ids,
@@ -10,9 +14,6 @@ from app.ingestion.models import DocumentDB, save_all_to_db
 from app.ingestion.process_utils.embedding_utils import process_files
 from app.ingestion.schemas import AirtableIngestionResponse, DocumentPreview
 from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_gcp
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from ..database import get_async_session
 from .schemas import OrganizationDocuments
@@ -198,3 +199,43 @@ async def get_documents_grouped_by_organization(
     return_list = list(org_docs_map.values())
     # Print total number of docs
     return return_list
+
+
+@router.get("/list-unique-organizations", response_model=list[str])
+async def list_unique_organizations(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Retrieves a list of unique organizations from the database.
+    """
+    query = select(DocumentDB.organizations).distinct()
+    result = await session.execute(query)
+    organizations = result.scalars().all()
+    # Flatten the list of organizations
+    unique_organizations = set()
+    for orgs in organizations:
+        if isinstance(orgs, list):
+            unique_organizations.update(orgs)
+        else:
+            unique_organizations.add(orgs)
+    return sorted(unique_organizations)
+
+
+@router.get("/list-unique-survey-types", response_model=list[str])
+async def list_unique_survey_types(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Retrieves a list of unique survey types from the database.
+    """
+    query = select(DocumentDB.survey_type).distinct()
+    result = await session.execute(query)
+    survey_types = result.scalars().all()
+    # Flatten the list of survey types
+    unique_survey_types = set()
+    for survey in survey_types:
+        if isinstance(survey, list):
+            unique_survey_types.update(survey)
+        else:
+            unique_survey_types.add(survey)
+    return sorted(unique_survey_types)

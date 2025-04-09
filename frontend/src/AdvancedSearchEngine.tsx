@@ -51,13 +51,28 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     setLoading(true)
     const formData = new FormData(event.currentTarget)
     const query = formData.get("search") as string
-    const country = formData.get("country") as string
-    const organization = formData.get("organization") as string
-    const region = formData.get("region") as string
+
+    // Parse the JSON strings from hidden inputs
+    let organizations: string[] = []
+    let survey_types: string[] = []
 
     try {
-      // Pass the resultsCount to the API
-      const results = await searchDocuments(query, country, organization, region, resultsCount)
+      const orgsJson = formData.get("organizations") as string
+      if (orgsJson) {
+        organizations = JSON.parse(orgsJson)
+      }
+
+      const typesJson = formData.get("survey_types") as string
+      if (typesJson) {
+        survey_types = JSON.parse(typesJson)
+      }
+    } catch (error) {
+      console.error("Error parsing form data:", error)
+    }
+
+    try {
+      // Call the API with the correct parameters
+      const results = await searchDocuments(query, organizations, survey_types)
 
       // Sort results by number of strong matches
       const sortedResults = results
@@ -147,26 +162,6 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
       window.location.href = "/login"
     }
   }
-
-  // Handle clicks outside the settings panel
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Check if settings is open and the click is outside any modal content
-      if (showSettings) {
-        // We're checking if the click target is not within any element with class "settings-modal-content"
-        // This assumes we'll add this class to the Card in SettingsPopup
-        const isClickOutside = !(event.target as Element).closest(".settings-modal-content")
-        if (isClickOutside) {
-          setShowSettings(false)
-        }
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showSettings])
 
   return (
     <IslandLayout>

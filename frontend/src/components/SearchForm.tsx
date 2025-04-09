@@ -5,13 +5,14 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown, Loader2, Clock, X, Search } from "lucide-react"
+import { Check, ChevronDown, Loader2, Clock, X } from 'lucide-react'
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 import axios from "axios"
 import { toast } from "sonner"
 import "../styles/dropdown.css"
+import { fetchOrganizations, fetchSurveyTypes } from "../api"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -53,7 +54,8 @@ const CustomDropdown: FC<{
   onChange: (selected: string[]) => void
   placeholder: string
   label: string
-}> = ({ options, selectedOptions, onChange, placeholder, label }) => {
+  isLoading?: boolean
+}> = ({ options, selectedOptions, onChange, placeholder, label, isLoading = false }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -90,16 +92,24 @@ const CustomDropdown: FC<{
         variant="outline"
         className="w-full justify-between text-white"
         onClick={() => setIsOpen(!isOpen)}
+        disabled={isLoading}
       >
-        <span>
-          {selectedOptions.length > 0
-            ? `${selectedOptions.length} ${label.toLowerCase()}${selectedOptions.length > 1 ? "s" : ""} selected`
-            : placeholder}
-        </span>
+        {isLoading ? (
+          <span className="flex items-center">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading...
+          </span>
+        ) : (
+          <span>
+            {selectedOptions.length > 0
+              ? `${selectedOptions.length} ${label.toLowerCase()}${selectedOptions.length > 1 ? "s" : ""} selected`
+              : placeholder}
+          </span>
+        )}
         <ChevronDown className="h-4 w-4 opacity-50" />
       </Button>
 
-      {isOpen && (
+      {isOpen && !isLoading && (
         <div className="dropdown-menu">
           <div className="flex items-center justify-between py-2 px-3 text-sm font-medium text-white">
             <span>{label}</span>
@@ -116,46 +126,25 @@ const CustomDropdown: FC<{
           </div>
           <div className="border-t border-white/20"></div>
           <div className="max-h-[300px] overflow-y-auto">
-            {options.map((option) => (
-              <CustomCheckbox
-                key={option}
-                checked={selectedOptions.includes(option)}
-                onChange={() => toggleOption(option)}
-              >
-                {option}
-              </CustomCheckbox>
-            ))}
+            {options.length > 0 ? (
+              options.map((option) => (
+                <CustomCheckbox
+                  key={option}
+                  checked={selectedOptions.includes(option)}
+                  onChange={() => toggleOption(option)}
+                >
+                  {option}
+                </CustomCheckbox>
+              ))
+            ) : (
+              <div className="py-3 px-3 text-sm text-white/70 text-center">No options available</div>
+            )}
           </div>
         </div>
       )}
     </div>
   )
 }
-
-const organizations = ["IDHS", "IDinsight", "National Statistics Bureau", "UNICEF", "USAID", "World Bank"]
-
-const surveytypes = [
-  "DHS Survey",
-  "DOH HPLS Round 1",
-  "DOH HPLS Round 2",
-  "DOH HPLS Round 3",
-  "DOH HPLS Round 4",
-  "Global Findex Survey 2021",
-  "IHDS Round 2",
-  "LSMS-ISA ESS Wave 4",
-  "LSMS-ISA GHS Panel Year 4",
-  "LSMS-ISA TZNPS Year 4",
-  "LSMS-ISA UNPS 2019-20",
-  "MICS7 Base Questionnaire",
-  "MICS7 Complementary Questionnaires",
-  "National household income and expenditure survey",
-  "National labor force survey",
-  "SPA Questionnaire",
-  "TKPI Round 1",
-  "UNICEF WaSHPALS Handwashing Nudges Evaluation",
-  "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
-]
-
 
 const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
@@ -164,9 +153,37 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
   const [showHistory, setShowHistory] = useState(false)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [organizations, setOrganizations] = useState<string[]>([])
+  const [surveyTypes, setSurveyTypes] = useState<string[]>([])
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true)
   const historyRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
+
+  // Fetch organizations and survey types on component mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      setIsLoadingOptions(true)
+      try {
+        const [orgsData, typesData] = await Promise.all([
+          fetchOrganizations(),
+          fetchSurveyTypes()
+        ]);
+
+        setOrganizations(orgsData);
+        setSurveyTypes(typesData);
+      } catch (error) {
+        console.error("Error fetching dropdown options:", error);
+        toast.error("Failed to load dropdown options.");
+        setOrganizations([]);
+        setSurveyTypes([]);
+      } finally {
+        setIsLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, []);
 
   // Handle clicks outside the history dropdown
   useEffect(() => {
@@ -230,6 +247,33 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    // Add the selected organizations and survey types to the form data
+    const formElement = e.currentTarget as HTMLFormElement;
+
+    // Create hidden fields for the arrays if they don't exist
+    const orgsField = formElement.querySelector('input[name="organizations"]');
+    if (!orgsField) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'organizations';
+      input.value = JSON.stringify(selectedOrgs);
+      formElement.appendChild(input);
+    } else {
+      (orgsField as HTMLInputElement).value = JSON.stringify(selectedOrgs);
+    }
+
+    const typesField = formElement.querySelector('input[name="survey_types"]');
+    if (!typesField) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'survey_types';
+      input.value = JSON.stringify(selectedSurveyTypes);
+      formElement.appendChild(input);
+    } else {
+      (typesField as HTMLInputElement).value = JSON.stringify(selectedSurveyTypes);
+    }
+
     onSubmit(e)
     setShowHistory(false)
   }
@@ -317,23 +361,21 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
           onChange={setSelectedOrgs}
           placeholder="Select Organizations"
           label="Organization"
+          isLoading={isLoadingOptions}
         />
-        {/* Hidden input to submit selected organizations */}
-        <input type="hidden" name="organization" value={selectedOrgs.join(",")} />
       </div>
 
       {/* Survey Type Dropdown */}
       <div>
         <Label className="block text-sm font-medium text-white mb-1">Survey Types</Label>
         <CustomDropdown
-          options={surveytypes}
+          options={surveyTypes}
           selectedOptions={selectedSurveyTypes}
           onChange={setSelectedSurveyTypes}
           placeholder="Select Survey Types"
           label="Survey Type"
+          isLoading={isLoadingOptions}
         />
-        {/* Hidden input to submit selected survey types */}
-        <input type="hidden" name="surveyType" value={selectedSurveyTypes.join(",")} />
       </div>
 
       {/* Submit and History Buttons */}
@@ -341,7 +383,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
         <Button
           type="submit"
           className="relative flex-1 bg-white text-black hover:bg-gray-200 flex items-center justify-center"
-          disabled={loading}
+          disabled={loading || isLoadingOptions}
         >
           {loading ? (
             <>
@@ -349,10 +391,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
               Searching...
             </>
           ) : (
-            <>
-              <Search className="mr-2 h-4 w-4" />
-              Search
-            </>
+            "Search"
           )}
         </Button>
 

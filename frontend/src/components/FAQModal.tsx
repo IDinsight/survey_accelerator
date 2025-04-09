@@ -95,10 +95,16 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
           className="flex-1 flex flex-col overflow-hidden"
         >
           <TabsList className="grid w-full grid-cols-2 bg-black/50 mb-4">
-            <TabsTrigger value="faq" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger
+              value="faq"
+              className="text-white data-[state=active]:bg-[#CC7722] data-[state=active]:text-white data-[state=inactive]:bg-white/10"
+            >
               FAQ
             </TabsTrigger>
-            <TabsTrigger value="documents" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger
+              value="documents"
+              className="text-white data-[state=active]:bg-[#CC7722] data-[state=active]:text-white data-[state=inactive]:bg-white/10"
+            >
               Document Library
             </TabsTrigger>
           </TabsList>
@@ -114,13 +120,21 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                     <AccordionContent className="text-white/80 px-4 pb-4">
                       Survey Accelerator is a specialized search engine designed to help researchers, policymakers, and
                       development practitioners quickly find relevant information across a wide range of high-quality
-                      surveys and research documents. We built it so that we could centralize all of the best surveys
-                      that are available in the public domain and make them easy to find, minimizing the time between you
-                      having an idea for a survey and then seeing the best source documents that are available.
-                      
-                      It uses advanced search algorithms to identify the most relevant
-                      matches to your queries within documents from organizations like IDHS, USAID, UNICEF, and
+                      surveys and research documents. It uses advanced search algorithms to identify the most relevant
+                      matches to your queries within documents from organizations like IDHS, IDinsight, UNICEF, and
                       more.
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="cost" className="border-b border-white/20">
+                    <AccordionTrigger className="text-white hover:no-underline py-4 px-4">
+                      Does it cost anything to use?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-white/80 px-4 pb-4">
+                      No, Survey Accelerator is completely free to use. It was developed as a public good to help
+                      researchers, policymakers, and development practitioners access and utilize survey data more
+                      effectively. There are no subscription fees, usage limits, or premium tiers. All features are
+                      available to all registered users at no cost.
                     </AccordionContent>
                   </AccordionItem>
 
@@ -135,16 +149,10 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                         <li>Optionally filter by organization or survey type using the dropdown menus</li>
                         <li>Click the Search button or press Enter</li>
                         <li>Browse the results and click on any document card to view it</li>
-                        <li>Click on specific matches within a document to navigate directly to that page; each match
-                            has custom highlights to help you find the most relevant information faster</li>
-
+                        <li>Click on specific matches within a document to navigate directly to that page</li>
                       </ol>
                       <p className="mt-2">
-                      <br />
-                      Results are ranked by relevance, with "Strong" matches appearing at the top
-                       <br /><br />
-                      
-                        You can download any PDF by clicking the Download button in the PDF preview
+                        Results are ranked by relevance, with "Strong" matches appearing at the top.
                       </p>
                     </AccordionContent>
                   </AccordionItem>
@@ -169,18 +177,6 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                       Currently, adding new documents to the database requires administrator access. If you have surveys
                       or documents you'd like to contribute, please contact the Survey Accelerator team at
                       surveyaccelerator@idinsight.org with details about your documents.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="cost" className="border-b border-white/20">
-                    <AccordionTrigger className="text-white hover:no-underline py-4 px-4">
-                      Does it cost anything to use?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-white/80 px-4 pb-4">
-                      No, Survey Accelerator is completely free to use. It was developed as a public good to help
-                      researchers, policymakers, and development practitioners access and utilize survey data more
-                      effectively. There are no subscription fees, usage limits, or premium tiers. All features are
-                      available to all registered users at no cost.
                     </AccordionContent>
                   </AccordionItem>
 

@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config import (
     PGVECTOR_DISTANCE,
@@ -82,6 +82,7 @@ class DocumentDB(Base):
         DateTime(timezone=True), nullable=True
     )
     document_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
+    survey_type: Mapped[Optional[list[str]]] = mapped_column(String, nullable=True)
 
 
 async def save_document_to_db(
@@ -113,6 +114,7 @@ async def save_document_to_db(
         drive_link = metadata.get("Drive link", "")
         year = metadata.get("Year", None)
         document_id = metadata.get("ID", None)
+        survey_type = metadata.get("Survey type", "")
     except Exception as e:
         logger.error(f"Error processing metadata for file '{file_name}': {e}")
         raise
@@ -137,10 +139,11 @@ async def save_document_to_db(
                 drive_link=drive_link,
                 year=year,
                 date_added=date_added,
-                document_id=document_id,  # Using the document_id passed to the function
+                document_id=document_id,
                 pdf_url=pdf_url,
                 summary=summary,
                 title=title,
+                survey_type=survey_type,
             )
 
             # QA pair extraction has been removed

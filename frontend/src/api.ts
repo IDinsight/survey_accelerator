@@ -2,14 +2,11 @@ import axios from "axios"
 
 const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
 const authToken = process.env.NEXT_PUBLIC_BACKEND_PW || "kk"
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000"
 
-export const searchDocuments = async (
-  query: string,
-  country: string,
-  organization: string,
-  region: string,
-  resultsCount = 25,
-) => {
+const getToken = () => localStorage.getItem("token") || ""
+
+export const searchDocuments = async (query: string, organizations: string[] = [], survey_types: string[] = []) => {
   try {
     const endpoint = "/search/generic"
     const token = localStorage.getItem("token")
@@ -18,23 +15,34 @@ export const searchDocuments = async (
       throw new Error("Authentication token not found")
     }
 
-    const response = await axios.post(
-      `${backendUrl}${endpoint}`,
-      {
-        query,
-        country: country || undefined,
-        organization: organization || undefined,
-        region: region || undefined,
-        limit: resultsCount,
+    // Ensure arrays are never null or undefined
+    const safeOrganizations = Array.isArray(organizations) ? organizations : []
+    const safeSurveyTypes = Array.isArray(survey_types) ? survey_types : []
+
+    // Build request body with explicit arrays
+    const requestBody = {
+      query: query,
+      organizations: safeOrganizations,
+      survey_types: safeSurveyTypes,
+    }
+
+    console.log("Sending request with body:", JSON.stringify(requestBody, null, 2))
+
+    const response = await axios.post(`${backendUrl}${endpoint}`, requestBody, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 40000, // 40 seconds timeout
-      },
-    )
+      timeout: 40000, // 40 seconds timeout
+    })
+
+    console.log("Response received:", response.data)
+
+    // Check if we got an empty result
+    if (response.data.results && response.data.results.length === 0) {
+      console.log("No results returned from the server")
+    }
+
     return response.data.results || []
   } catch (error) {
     console.error("Error fetching search results:", error)
@@ -200,7 +208,6 @@ export const updateResultsCountPreference = async (numResults: number): Promise<
   }
 }
 
-
 // New function to fetch documents grouped by organization
 export const fetchDocumentsByOrganization = async () => {
   try {
@@ -222,5 +229,53 @@ export const fetchDocumentsByOrganization = async () => {
   } catch (error) {
     console.error("Error fetching documents by organization:", error)
     throw new Error("Failed to fetch documents by organization.")
+  }
+}
+
+// Add these new functions to fetch organizations and survey types
+
+export const fetchOrganizations = async (): Promise<string[]> => {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.get(`${backendUrl}/ingestion/list-unique-organizations`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 30000, // 30 seconds timeout
+    })
+
+    return response.data || []
+  } catch (error) {
+    console.error("Error fetching organizations:", error)
+    return [] // Return empty array as fallback
+  }
+}
+
+export const fetchSurveyTypes = async (): Promise<string[]> => {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.get(`${backendUrl}/ingestion/list-unique-survey-types`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 30000, // 30 seconds timeout
+    })
+
+    return response.data || []
+  } catch (error) {
+    console.error("Error fetching survey types:", error)
+    return [] // Return empty array as fallback
   }
 }

@@ -14,7 +14,7 @@ class DocumentMetadata(BaseModel):
     title: str
     summary: str
     pdf_url: str
-    highlighted_pdf_url: Optional[str] = None  # URL to the pre-highlighted PDF
+    highlighted_pdf_url: Optional[str] = None
     countries: List[str]
     organizations: List[str]
     regions: List[str]
@@ -22,20 +22,12 @@ class DocumentMetadata(BaseModel):
 
 
 # Base search request shared by both search types
-class BaseSearchRequest(BaseModel):
+class SearchRequest(BaseModel):
     """Base schema for search request parameters."""
 
     query: str
-    country: Optional[str] = None
-    organization: Optional[str] = None
-    region: Optional[str] = None
-
-
-# Generic search schemas
-class GenericSearchRequest(BaseSearchRequest):
-    """Schema for generic search request parameters."""
-
-    pass
+    organizations: list[str] = []
+    survey_types: list[str] = []
 
 
 class MatchedChunk(BaseModel):
@@ -44,7 +36,7 @@ class MatchedChunk(BaseModel):
     page_number: int
     rank: int
     explanation: str
-    starting_keyphrase: str = ""  # Text to highlight in the PDF
+    starting_keyphrase: str = ""
 
 
 class GenericDocumentSearchResult(BaseModel):
