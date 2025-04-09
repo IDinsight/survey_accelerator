@@ -5,10 +5,14 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown, Loader2 } from "lucide-react"
+import { Check, ChevronDown, Loader2, Clock, X } from 'lucide-react'
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
+import axios from "axios"
+import { toast } from "sonner"
+import "../styles/dropdown.css"
+import { fetchOrganizations, fetchSurveyTypes } from "../api"
 
 interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -26,7 +30,7 @@ const CustomCheckbox: FC<{
   return (
     <div
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-[#1e1e4a]",
+        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm text-white hover:bg-white/15 dropdown-item",
         disabled && "opacity-50 cursor-not-allowed",
       )}
       onClick={() => {
@@ -50,7 +54,8 @@ const CustomDropdown: FC<{
   onChange: (selected: string[]) => void
   placeholder: string
   label: string
-}> = ({ options, selectedOptions, onChange, placeholder, label }) => {
+  isLoading?: boolean
+}> = ({ options, selectedOptions, onChange, placeholder, label, isLoading = false }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -76,36 +81,64 @@ const CustomDropdown: FC<{
     }
   }
 
+  const clearAll = () => {
+    onChange([])
+  }
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="dropdown-container" ref={dropdownRef}>
       <Button
         type="button"
         variant="outline"
         className="w-full justify-between text-white"
         onClick={() => setIsOpen(!isOpen)}
+        disabled={isLoading}
       >
-        <span>
-          {selectedOptions.length > 0
-            ? `${selectedOptions.length} ${label.toLowerCase()}${selectedOptions.length > 1 ? "s" : ""} selected`
-            : placeholder}
-        </span>
+        {isLoading ? (
+          <span className="flex items-center">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading...
+          </span>
+        ) : (
+          <span>
+            {selectedOptions.length > 0
+              ? `${selectedOptions.length} ${label.toLowerCase()}${selectedOptions.length > 1 ? "s" : ""} selected`
+              : placeholder}
+          </span>
+        )}
         <ChevronDown className="h-4 w-4 opacity-50" />
       </Button>
 
-      {isOpen && (
-        <div className="absolute z-[100] mt-1 w-full rounded-md border border-gray-700 bg-[#111130] shadow-lg">
-          <div className="py-2 px-3 text-sm font-medium text-white">{label}</div>
-          <div className="border-t border-gray-700"></div>
-          <div className="max-h-[300px] overflow-y-auto">
-            {options.map((option) => (
-              <CustomCheckbox
-                key={option}
-                checked={selectedOptions.includes(option)}
-                onChange={() => toggleOption(option)}
+      {isOpen && !isLoading && (
+        <div className="dropdown-menu">
+          <div className="flex items-center justify-between py-2 px-3 text-sm font-medium text-white">
+            <span>{label}</span>
+            {selectedOptions.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-white hover:bg-white/10"
+                onClick={clearAll}
               >
-                {option}
-              </CustomCheckbox>
-            ))}
+                Clear all
+              </Button>
+            )}
+          </div>
+          <div className="border-t border-white/20"></div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {options.length > 0 ? (
+              options.map((option) => (
+                <CustomCheckbox
+                  key={option}
+                  checked={selectedOptions.includes(option)}
+                  onChange={() => toggleOption(option)}
+                >
+                  {option}
+                </CustomCheckbox>
+              ))
+            ) : (
+              <div className="py-3 px-3 text-sm text-white/70 text-center">No options available</div>
+            )}
           </div>
         </div>
       )}
@@ -113,91 +146,252 @@ const CustomDropdown: FC<{
   )
 }
 
-const organizations = ["IDHS", "IDinsight", "National Statistics Bureau", "UNICEF", "USAID", "World Bank"]
-
-const surveytypes = [
-  "DHS Survey",
-  "DOH HPLS Round 1",
-  "DOH HPLS Round 2",
-  "DOH HPLS Round 3",
-  "DOH HPLS Round 4",
-  "Global Findex Survey 2021",
-  "IHDS Round 2",
-  "LSMS-ISA ESS Wave 4",
-  "LSMS-ISA GHS Panel Year 4",
-  "LSMS-ISA TZNPS Year 4",
-  "LSMS-ISA UNPS 2019-20",
-  "MICS7 Base Questionnaire",
-  "MICS7 Complementary Questionnaires",
-  "National household income and expenditure survey",
-  "National labor force survey",
-  "SPA Questionnaire",
-  "TKPI Round 1",
-  "UNICEF WaSHPALS Handwashing Nudges Evaluation",
-  "Village Enterprise Development Impact Bond (VE DIB) Evaluation",
-]
-
 const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showHistory, setShowHistory] = useState(false)
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [organizations, setOrganizations] = useState<string[]>([])
+  const [surveyTypes, setSurveyTypes] = useState<string[]>([])
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true)
+  const historyRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
+
+  // Fetch organizations and survey types on component mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      setIsLoadingOptions(true)
+      try {
+        const [orgsData, typesData] = await Promise.all([
+          fetchOrganizations(),
+          fetchSurveyTypes()
+        ]);
+
+        setOrganizations(orgsData);
+        setSurveyTypes(typesData);
+      } catch (error) {
+        console.error("Error fetching dropdown options:", error);
+        toast.error("Failed to load dropdown options.");
+        setOrganizations([]);
+        setSurveyTypes([]);
+      } finally {
+        setIsLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, []);
+
+  // Handle clicks outside the history dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        historyRef.current &&
+        !historyRef.current.contains(event.target as Node) &&
+        !(event.target as Element).closest(".history-button")
+      ) {
+        setShowHistory(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  const fetchSearchHistory = async () => {
+    setLoadingHistory(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found")
+      }
+
+      const response = await axios.get(`${backendUrl}/search/search-history`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      setSearchHistory(response.data || [])
+    } catch (error) {
+      console.error("Error fetching search history:", error)
+      toast.error("Failed to load search history")
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const handleHistoryClick = () => {
+    if (!showHistory) {
+      fetchSearchHistory()
+    }
+    setShowHistory(!showHistory)
+    if (onHistoryClick) {
+      onHistoryClick()
+    }
+  }
+
+  const handleHistoryItemClick = (query: string) => {
+    setSearchQuery(query)
+    setShowHistory(false)
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    // Add the selected organizations and survey types to the form data
+    const formElement = e.currentTarget as HTMLFormElement;
+
+    // Create hidden fields for the arrays if they don't exist
+    const orgsField = formElement.querySelector('input[name="organizations"]');
+    if (!orgsField) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'organizations';
+      input.value = JSON.stringify(selectedOrgs);
+      formElement.appendChild(input);
+    } else {
+      (orgsField as HTMLInputElement).value = JSON.stringify(selectedOrgs);
+    }
+
+    const typesField = formElement.querySelector('input[name="survey_types"]');
+    if (!typesField) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'survey_types';
+      input.value = JSON.stringify(selectedSurveyTypes);
+      formElement.appendChild(input);
+    } else {
+      (typesField as HTMLInputElement).value = JSON.stringify(selectedSurveyTypes);
+    }
+
+    onSubmit(e)
+    setShowHistory(false)
+  }
+
+  const handleClear = () => {
+    setSearchQuery("")
+    setSelectedOrgs([])
+    setSelectedSurveyTypes([])
+  }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Search Query Input */}
-      <div>
-        <Label htmlFor="search" className="block text-sm font-medium text-white focus-visible:ring-transparent">
+      <div className="dropdown-container">
+        <Label htmlFor="search" className="block text-sm font-medium text-white">
           Search Query
         </Label>
-        <Input
-          id="search"
-          name="search"
-          type="text"
-          placeholder="Enter your search query"
-          className="mt-1 block w-full text-white placeholder-white/70 focus-visible:ring-transparent"
-          required
-        />
+        <div className="relative mt-1">
+          <Input
+            id="search"
+            name="search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Enter your search query"
+            className="pr-10 text-white placeholder-white/70 focus-visible:ring-transparent"
+            required
+            ref={searchInputRef}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-0 flex items-center pr-3"
+            >
+              <X className="h-4 w-4 text-white/70" />
+            </button>
+          )}
+        </div>
+
+        {/* Search History Dropdown */}
+        {showHistory && (
+          <div ref={historyRef} className="history-dropdown">
+            <div className="flex justify-between items-center py-2 px-3 text-sm font-medium text-white border-b border-white/20">
+              <span>Recent Searches</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-transparent"
+                onClick={() => setShowHistory(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {loadingHistory ? (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-white/70" />
+                </div>
+              ) : searchHistory.length > 0 ? (
+                searchHistory.map((query, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center py-2 px-3 text-sm text-white hover:bg-white/10 cursor-pointer dropdown-item"
+                    onClick={() => handleHistoryItemClick(query)}
+                  >
+                    <Clock className="h-4 w-4 mr-2 text-white/70" />
+                    <span className="truncate">{query}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-3 px-3 text-sm text-white/70 text-center">No recent searches</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Organizations Dropdown */}
       <div>
+        <Label className="block text-sm font-medium text-white mb-1">Organizations</Label>
         <CustomDropdown
           options={organizations}
           selectedOptions={selectedOrgs}
           onChange={setSelectedOrgs}
           placeholder="Select Organizations"
           label="Organization"
+          isLoading={isLoadingOptions}
         />
-        {/* Hidden input to submit selected organizations */}
-        <input type="hidden" name="organization" value={selectedOrgs.join(",")} />
       </div>
 
       {/* Survey Type Dropdown */}
       <div>
+        <Label className="block text-sm font-medium text-white mb-1">Survey Types</Label>
         <CustomDropdown
-          options={surveytypes}
+          options={surveyTypes}
           selectedOptions={selectedSurveyTypes}
           onChange={setSelectedSurveyTypes}
           placeholder="Select Survey Types"
           label="Survey Type"
+          isLoading={isLoadingOptions}
         />
-        {/* Hidden input to submit selected survey types */}
-        <input type="hidden" name="surveyType" value={selectedSurveyTypes.join(",")} />
       </div>
 
       {/* Submit and History Buttons */}
-      <div className="flex items-stretch mt-4 gap-3.5">
+      <div className="flex items-stretch mt-4 gap-3">
         <Button
           type="submit"
-          className="relative w-[83%] bg-white text-black flex items-center justify-center"
-          disabled={loading}
+          className="relative flex-1 bg-white text-black hover:bg-gray-200 flex items-center justify-center"
+          disabled={loading || isLoadingOptions}
         >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Searching...</span>
+              Searching...
             </>
           ) : (
-            <span>Search</span>
+            "Search"
           )}
         </Button>
 
@@ -206,14 +400,33 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
             <TooltipTrigger asChild>
               <Button
                 type="button"
-                onClick={onHistoryClick}
-                className="w-[13.5%] bg-[#cc7722] text-white flex flex-col items-center justify-center p-2"
+                onClick={handleHistoryClick}
+                className={`w-12 ${
+                  showHistory ? "bg-[#a05e1b]" : "bg-[#cc7722]"
+                } text-white hover:bg-[#b88a01] flex items-center justify-center history-button`}
               >
-                <YoutubeSearchedForIcon className="w-20 h-20" />
+                <YoutubeSearchedForIcon className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Search history</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={handleClear}
+                className="w-12 bg-gray-600 text-white hover:bg-gray-700 flex items-center justify-center"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Clear all filters</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

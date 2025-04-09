@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.auth.dependencies import authenticate_user
 from app.database import get_async_session
-from app.search.models import log_search
+from app.search.models import SearchLogDB, log_search
 from app.search.pdf_highlight_utils import get_highlighted_pdf
-from app.search.schemas import GenericSearchRequest, GenericSearchResponse
+from app.search.schemas import GenericSearchResponse, SearchRequest
 from app.search.utils import hybrid_search
 from app.users.models import UsersDB
 from app.utils import setup_logger
@@ -20,33 +21,36 @@ router = APIRouter(
 
 @router.post("/generic", response_model=GenericSearchResponse)
 async def search_generic(
-    request: GenericSearchRequest,
+    request: SearchRequest,
     session: AsyncSession = Depends(get_async_session),
     user: UsersDB = Depends(authenticate_user),
 ) -> GenericSearchResponse:
-    # Log the request for debugging
-    logger.info(f"Generic search request: {request.query}")
-    # We'll log highlighted URLs below in the handler
     """
     Search for document chunks based on the provided query.
     Returns chunks with context and explanation.
     """
+    # Log the request for debugging
+    logger.info(
+        f"Received search request: {request} with filters: {request.organizations}, {request.survey_types}"
+    )
+
     try:
         if not request.query.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Query cannot be empty."
             )
-
+        max_results = user.num_results_preference
         # Call hybrid_search
         results = await hybrid_search(
             session,
             query_str=request.query,
-            country=request.country,
-            organization=request.organization,
-            region=request.region,
+            organizations=request.organizations,
+            survey_types=request.survey_types,
+            max_results=max_results,
         )
 
         if not results:
+            logger.info("This is happening")
             return GenericSearchResponse(
                 query=request.query, results=[], message="No matching documents found."
             )
@@ -129,3 +133,25 @@ async def search_generic(
     except Exception as e:
         logger.error(f"Error during generic search for query '{request.query}': {e}")
         raise e
+
+
+@router.get("/search-history", response_model=list[str])
+async def get_search_history(
+    session: AsyncSession = Depends(get_async_session),
+    user: UsersDB = Depends(authenticate_user),
+) -> None:
+    """
+    Retrieve the search history for the authenticated user.
+    """
+    try:
+        # Fetch search history from the database
+        result = await session.execute(
+            select(SearchLogDB.query)
+            .where(SearchLogDB.user_id == user.user_id)
+            .limit(10)
+        )
+        search_history = result.scalars().all()
+        return search_history
+    except Exception as e:
+        logger.error(f"Error retrieving search history: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.") from None

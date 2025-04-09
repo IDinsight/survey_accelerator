@@ -90,7 +90,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
     <div>
       <Card
         onClick={handleCardClick}
-        className={`cursor-pointer transition-all duration-200 border-0 backdrop-blur-sm ${
+        className={`cursor-pointer z-1 transition-all duration-200 border-0 backdrop-blur-sm ${
           isSelected
             ? "bg-[#CC7722]/80 shadow-lg transform scale-[1.01]"
             : "bg-black/30 hover:bg-black/40 hover:shadow-md"
@@ -106,13 +106,13 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
         }}
       >
         {/* Title */}
-        <div className="px-4 pt-2 pb-0">
+        <div className="px-4 pt-2 pb-0 -mb-5 -mt-4">
           <h3 className="text-lg font-semibold text-white leading-tight">{result.metadata.title}</h3>
         </div>
 
         {/* Content */}
-        <CardContent className="py-1 px-4 space-y-1">
-          <div className="grid grid-cols-1 gap-0.5 text-sm text-white/90">
+        <CardContent className="py-2 px-4 space-y-2">
+          <div className="grid grid-cols-1 gap-1 text-sm text-white/90">
             <div className="flex items-center gap-2">
               <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-white" />
               <span className="truncate" title={`Region: ${regions}, Country: ${countries}`}>
@@ -135,7 +135,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           <div className="flex justify-end">
             <div
               className={`
-                flex items-center gap-1 px-2 py-1 rounded-md
+                flex items-center gap-1 px-2 py-1 rounded-md -mb-3.5
                 ${isSelected ? "bg-white/80 text-[#CC7722]" : "bg-white/20 text-white"}
                 text-sm font-medium whitespace-nowrap
               `}

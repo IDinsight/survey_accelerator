@@ -163,3 +163,4 @@ node_modules/
 # Exclude Google Cloud Platform credentials
 gcp_credentials.json
 backend/highlighted_pdfs/
+backend/uploaded_files/

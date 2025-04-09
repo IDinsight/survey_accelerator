@@ -8,12 +8,14 @@ import SearchResultCard from "./components/SearchResultCard"
 import PDFViewer from "./components/PDFViewer"
 import IslandLayout from "./components/IslandLayout"
 import SettingsPopup from "./components/SettingsPopup"
+import FAQModal from "./components/FAQModal"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
-import { LogOut, Settings } from "lucide-react"
+import { LogOut, Settings, HelpCircle } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
+import "./styles/dropdown.css"
 
 interface User {
   email: string
@@ -33,6 +35,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showFAQ, setShowFAQ] = useState(false)
   const [resultsCount, setResultsCount] = useState(25) // Default to 25 results
 
   // Load saved preferences on component mount
@@ -48,13 +51,28 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     setLoading(true)
     const formData = new FormData(event.currentTarget)
     const query = formData.get("search") as string
-    const country = formData.get("country") as string
-    const organization = formData.get("organization") as string
-    const region = formData.get("region") as string
+
+    // Parse the JSON strings from hidden inputs
+    let organizations: string[] = []
+    let survey_types: string[] = []
 
     try {
-      // Pass the resultsCount to the API
-      const results = await searchDocuments(query, country, organization, region, resultsCount)
+      const orgsJson = formData.get("organizations") as string
+      if (orgsJson) {
+        organizations = JSON.parse(orgsJson)
+      }
+
+      const typesJson = formData.get("survey_types") as string
+      if (typesJson) {
+        survey_types = JSON.parse(typesJson)
+      }
+    } catch (error) {
+      console.error("Error parsing form data:", error)
+    }
+
+    try {
+      // Call the API with the correct parameters
+      const results = await searchDocuments(query, organizations, survey_types)
 
       // Sort results by number of strong matches
       const sortedResults = results
@@ -130,6 +148,21 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     user_id: Number.parseInt(localStorage.getItem("user_id") || "0", 10),
   }
 
+  // Default logout handler if none is provided
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout()
+    } else {
+      // Default logout behavior
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      localStorage.removeItem("email")
+      localStorage.removeItem("user_id")
+      // Redirect to login page
+      window.location.href = "/login"
+    }
+  }
+
   return (
     <IslandLayout>
       {showSettings && (
@@ -141,44 +174,66 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
         />
       )}
 
+      <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
+
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
-          <div className="mb-3">
-            <div className="flex justify-between items-center mb-4">
-              <img
-                src="/SurveyAcceleratorLogo-White.svg"
-                alt="Banner"
-                className="w-4/5 h-auto object-cover rounded-lg"
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowSettings(true)}
-                  variant="ghost"
-                  className="text-white hover:bg-white/10"
-                  title="Settings"
-                >
-                  <Settings className="h-5 w-5" />
-                </Button>
-                {onLogout && (
-                  <Button onClick={onLogout} variant="ghost" className="text-white hover:bg-white/10" title="Logout">
-                    <LogOut className="h-5 w-5" />
+          <div className="mb-2">
+            {/* Logo and icons in a single row */}
+            <div className="flex flex-col mb-2">
+              {/* Full-width logo */}
+              <div className="w-full mb-1">
+                <img
+                  src="/SurveyAcceleratorLogo-White.svg"
+                  alt="Survey Accelerator"
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+
+              {/* Icons row - very compact */}
+              <div className="flex justify-end">
+                <div className="flex gap-1">
+                  <Button
+                    onClick={() => setShowFAQ(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Help"
+                  >
+                    <HelpCircle className="h-4 w-4" />
                   </Button>
-                )}
+                  <Button
+                    onClick={() => setShowSettings(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleLogout}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
+                    title="Logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
             {/* Search form with glass effect */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4">
+            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4 search-form-container">
               <SearchForm onSubmit={handleSearch} loading={loading} />
             </div>
           </div>
 
           {/* Search results without glass effect */}
-          <div>
-            {searchResults.length > 0 && (
-              <h3 className="text-xl font-semibold text-white mb-2 text-center">Top Documents</h3>
-            )}
+          <div className="results-container">
+            {searchResults.length > 0 && <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>}
             <div className="space-y-3">
               {searchResults.map((result) => (
                 <SearchResultCard

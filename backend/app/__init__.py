@@ -1,9 +1,14 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from . import auth, ingestion, search, users
 from .search.pdf_highlight_utils import setup_static_file_serving
 from .utils import setup_logger
+
+LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 
 logger = setup_logger()
 
@@ -24,6 +29,11 @@ def create_app() -> FastAPI:
 
     # Set up static file serving for highlighted PDFs
     setup_static_file_serving(app)
+    app.mount(
+        "/uploaded_files",
+        StaticFiles(directory=LOCAL_UPLOAD_DIR),
+        name="uploaded_files",
+    )
 
     origins = [
         "http://localhost",

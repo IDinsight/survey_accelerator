@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Slider } from "./ui/slider"
 import { toast } from "sonner"
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from "lucide-react"
@@ -32,6 +32,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [localResultsCount, setLocalResultsCount] = useState(resultsCount)
+  const [isOpen, setIsOpen] = useState(true)
 
   // Password validation states
   const [passwordLengthValid, setPasswordLengthValid] = useState(false)
@@ -119,19 +120,25 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <Card className="w-[90%] max-w-md bg-black/30 backdrop-blur-sm text-white border-0">
-        <CardHeader className="pb-2">
-          <CardTitle>Settings</CardTitle>
-          <CardDescription className="text-gray-300">Manage your account and preferences</CardDescription>
-        </CardHeader>
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (!open) {
+      onClose()
+    }
+  }
 
-        <CardContent className="space-y-6">
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] bg-black/80 backdrop-blur-md text-white border border-white/20 flex flex-col overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-white">Settings</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
           {/* User Information */}
           <div>
             <h3 className="text-sm font-medium mb-2">User Information</h3>
-            <p className="text-sm text-gray-300">Email: {safeUser.email}</p>
+            <p className="text-sm text-white/70">Email: {safeUser.email}</p>
           </div>
 
           {/* Password Change Toggle */}
@@ -155,7 +162,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className={`bg-black/30 border-gray-700 ${
+                    className={`bg-black/30 border-white/20 ${
                       currentPassword && !currentPasswordValid ? "border-red-500" : ""
                     }`}
                     required
@@ -175,7 +182,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className={`bg-black/30 border-gray-700 ${
+                    className={`bg-black/30 border-white/20 ${
                       newPassword && !passwordLengthValid ? "border-red-500" : ""
                     }`}
                     required
@@ -201,7 +208,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`bg-black/30 border-gray-700 ${
+                    className={`bg-black/30 border-white/20 ${
                       confirmPassword && !passwordsMatch ? "border-red-500" : ""
                     }`}
                     required
@@ -222,7 +229,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#CC7722] hover:bg-[#b88a01]"
+                  className="w-full bg-white text-black hover:bg-gray-200"
                   disabled={isSubmitting || !passwordLengthValid || !passwordsMatch || !currentPasswordValid}
                 >
                   {isSubmitting ? "Changing..." : "Change Password"}
@@ -234,7 +241,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
           {/* Search Results Count Preference */}
           <div>
             <h3 className="text-sm font-medium mb-2">Search Results Count</h3>
-            <p className="text-sm text-gray-300 mb-4">
+            <p className="text-sm text-white/70 mb-4">
               Set the maximum number of results to display: <span className="font-bold">{localResultsCount}</span>
             </p>
 
@@ -243,31 +250,23 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
                 defaultValue={[localResultsCount]}
                 max={50}
                 min={5}
-                step={5}
+                step={1}
                 onValueChange={handleResultsCountChange}
                 className="w-full"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-white/50 mt-1">
                 <span>5</span>
-                <span>25</span>
                 <span>50</span>
               </div>
             </div>
 
-            <Button onClick={saveResultsCount} className="w-full bg-[#CC7722] hover:bg-[#b88a01] mt-2">
+            <Button onClick={saveResultsCount} className="w-full bg-white text-black hover:bg-gray-200 mt-2">
               Save Preferences
             </Button>
           </div>
-
-          {/* Close Button */}
-          <div className="flex justify-end pt-2">
-            <Button variant="outline" onClick={onClose} className="border-gray-600 text-white hover:bg-white/10">
-              Close
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
