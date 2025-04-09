@@ -90,7 +90,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
     <div>
       <Card
         onClick={handleCardClick}
-        className={`cursor-pointer transition-all duration-200 border-0 backdrop-blur-sm ${
+        className={`cursor-pointer z-1 transition-all duration-200 border-0 backdrop-blur-sm ${
           isSelected
             ? "bg-[#CC7722]/80 shadow-lg transform scale-[1.01]"
             : "bg-black/30 hover:bg-black/40 hover:shadow-md"

@@ -14,7 +14,7 @@ const IslandLayout: React.FC<IslandLayoutProps> = ({ children }) => {
       <AnimatedBackground />
 
       {/* Content container with z-index to appear above background */}
-      <div className="relative z-10 w-full h-full">{children}</div>
+      <div className="relative z-1 w-full h-full">{children}</div>
     </div>
   )
 }

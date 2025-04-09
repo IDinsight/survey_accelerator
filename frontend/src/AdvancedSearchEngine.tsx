@@ -8,10 +8,11 @@ import SearchResultCard from "./components/SearchResultCard"
 import PDFViewer from "./components/PDFViewer"
 import IslandLayout from "./components/IslandLayout"
 import SettingsPopup from "./components/SettingsPopup"
+import FAQModal from "./components/FAQModal"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
-import { LogOut, Settings } from "lucide-react"
+import { LogOut, Settings, HelpCircle } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 
@@ -33,6 +34,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
   const [selectedHighlightedId, setSelectedHighlightedId] = useState<number | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showFAQ, setShowFAQ] = useState(false)
   const [resultsCount, setResultsCount] = useState(25) // Default to 25 results
 
   // Load saved preferences on component mount
@@ -141,6 +143,8 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
         />
       )}
 
+      {showFAQ && <FAQModal onClose={() => setShowFAQ(false)} />}
+
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
@@ -152,6 +156,14 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
                 className="w-4/5 h-auto object-cover rounded-lg"
               />
               <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowFAQ(true)}
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  title="Help"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
                 <Button
                   onClick={() => setShowSettings(true)}
                   variant="ghost"
@@ -176,9 +188,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
 
           {/* Search results without glass effect */}
           <div>
-            {searchResults.length > 0 && (
-              <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>
-            )}
+            {searchResults.length > 0 && <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>}
             <div className="space-y-3">
               {searchResults.map((result) => (
                 <SearchResultCard
