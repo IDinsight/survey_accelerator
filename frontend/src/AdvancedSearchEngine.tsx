@@ -143,7 +143,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
         />
       )}
 
-      {showFAQ && <FAQModal onClose={() => setShowFAQ(false)} />}
+      <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
 
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}

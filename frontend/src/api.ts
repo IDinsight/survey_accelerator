@@ -199,3 +199,28 @@ export const updateResultsCountPreference = async (numResults: number): Promise<
     throw new Error(error.message || "Failed to update results count preference")
   }
 }
+
+
+// New function to fetch documents grouped by organization
+export const fetchDocumentsByOrganization = async () => {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.get(`${backendUrl}/ingestion/view-ingested-documents`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 30000, // 30 seconds timeout
+    })
+
+    return response.data || []
+  } catch (error) {
+    console.error("Error fetching documents by organization:", error)
+    throw new Error("Failed to fetch documents by organization.")
+  }
+}

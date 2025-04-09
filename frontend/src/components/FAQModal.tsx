@@ -1,209 +1,194 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Button } from "./ui/button"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "./ui/accordion"
-import { Loader2 } from 'lucide-react'
+import type React from "react"
+import { useEffect, useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion"
+import { Loader2 } from "lucide-react"
+import { Badge } from "./ui/badge"
+import { fetchDocumentsByOrganization } from "../api"
 
-interface DocumentInfo {
-  title: string
+// Define types inline for now
+interface DocumentPreview {
+  title: string | null
   file_name: string
-  preview_link: string
-  year: number
-  description: string
-  countries: string[]
-  regions: string[]
+  preview_link: string | null
+  year: number | null
+  description: string | null
+  countries: string[] | null
+  regions: string[] | null
 }
 
 interface OrganizationDocuments {
   organization: string
-  documents: DocumentInfo[]
+  documents: DocumentPreview[]
 }
 
 interface FAQModalProps {
   onClose: () => void
+  isOpen?: boolean
 }
 
-const FAQModal: React.FC<FAQModalProps> = ({ onClose }) => {
-  const [documents, setDocuments] = useState<OrganizationDocuments[]>([])
-  const [loading, setLoading] = useState(false)
+const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
+  // State for document library
+  const [organizationDocs, setOrganizationDocs] = useState<OrganizationDocuments[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch documents when the modal is opened
   useEffect(() => {
-    const fetchDocuments = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
-        const response = await fetch(`${backendUrl}/documents/list`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch documents")
+    if (isOpen) {
+      async function loadDocuments() {
+        setLoading(true)
+        try {
+          const data = await fetchDocumentsByOrganization()
+          setOrganizationDocs(data)
+          setError(null)
+        } catch (err) {
+          setError("Failed to load documents")
+          console.error(err)
+        } finally {
+          setLoading(false)
         }
-        
-        const data = await response.json()
-        setDocuments(data)
-      } catch (err) {
-        console.error("Error fetching documents:", err)
-        setError("Failed to load documents. Please try again later.")
-      } finally {
-        setLoading(false)
       }
-    }
 
-    fetchDocuments()
-  }, [])
+      loadDocuments()
+    }
+  }, [isOpen])
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <Card className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-black/30 backdrop-blur-sm text-white border-0">
-        <CardHeader className="pb-2">
-          <CardTitle>Frequently Asked Questions</CardTitle>
-          <CardDescription className="text-gray-300">Learn more about Survey Accelerator</CardDescription>
-        </CardHeader>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto bg-black/80 backdrop-blur-md text-white border border-white/20">
+        <DialogHeader>
+          <DialogTitle className="text-white">Resources & Help</DialogTitle>
+        </DialogHeader>
 
-        <CardContent className="space-y-4">
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1" className="border-gray-700">
-              <AccordionTrigger className="text-white hover:text-white hover:no-underline">
-                What is Survey Accelerator?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                <p>
-                  Survey Accelerator is a specialized search engine designed to help researchers, policymakers, and 
-                  development professionals quickly find relevant information within high-quality survey instruments.
+        <Tabs defaultValue="faq" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2 bg-black/50">
+            <TabsTrigger value="faq" className="text-white data-[state=active]:bg-white/10">
+              FAQ
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="text-white data-[state=active]:bg-white/10">
+              Document Library
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="faq" className="mt-4">
+            <div className="space-y-4">
+              <div className="bg-black/50 p-4 rounded-md border border-white/10">
+                <h3 className="text-lg font-medium text-white">How do I search for documents?</h3>
+                <p className="text-white/80">
+                  Enter your search query in the search box and press Enter or click the search button. You can filter
+                  results by country, organization, or region using the dropdown menus.
                 </p>
-                <p className="mt-2">
-                  Our platform allows you to search across multiple survey questionnaires from leading organizations 
-                  like UNICEF, World Bank, USAID, and national statistics bureaus, making it easier to discover 
-                  questions, methodologies, and best practices for your own research.
+              </div>
+
+              <div className="bg-black/50 p-4 rounded-md border border-white/10">
+                <h3 className="text-lg font-medium text-white">How are search results ranked?</h3>
+                <p className="text-white/80">
+                  Search results are ranked based on relevance to your query. Documents with more "Strong" matches will
+                  appear higher in the results.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
 
-            <AccordionItem value="item-2" className="border-gray-700">
-              <AccordionTrigger className="text-white hover:text-white hover:no-underline">
-                How do I use it?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                <ol className="list-decimal pl-5 space-y-2">
-                  <li>
-                    <strong>Enter your search query</strong> in the search box. You can search for specific topics, 
-                    questions, or concepts you're interested in.
-                  </li>
-                  <li>
-                    <strong>Filter your results</strong> by selecting organizations, survey types, or regions if needed.
-                  </li>
-                  <li>
-                    <strong>Review the search results</strong> to find documents that match your query. Each result 
-                    shows the document title, organization, and a brief description.
-                  </li>
-                  <li>
-                    <strong>Click on a result card</strong> to view the PDF with highlighted matches to your search query.
-                  </li>
-                  <li>
-                    <strong>Explore the matches</strong> by clicking on them to navigate directly to the relevant page 
-                    in the document.
-                  </li>
-                </ol>
-              </AccordionContent>
-            </AccordionItem>
+              <div className="bg-black/50 p-4 rounded-md border border-white/10">
+                <h3 className="text-lg font-medium text-white">Can I download documents?</h3>
+                <p className="text-white/80">
+                  Yes, you can download documents by clicking on the "View Document" link in the search results or in
+                  the Document Library. This will open the document in a new tab where you can download it.
+                </p>
+              </div>
 
-            <AccordionItem value="item-3" className="border-gray-700">
-              <AccordionTrigger className="text-white hover:text-white hover:no-underline">
-                What documents are available?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-white" />
-                  </div>
-                ) : error ? (
-                  <div className="text-red-400 py-4">{error}</div>
-                ) : (
-                  <div className="space-y-6">
-                    <p>
-                      Survey Accelerator currently includes questionnaires from major development organizations and 
-                      national statistics bureaus. Below is a breakdown of available documents by organization:
-                    </p>
-                    
-                    {documents.map((org) => (
-                      <div key={org.organization} className="mt-4">
-                        <h4 className="text-lg font-medium text-white mb-2">{org.organization}</h4>
-                        <p className="mb-2 text-sm">{org.documents.length} documents available</p>
-                        
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value={`org-${org.organization}`} className="border-gray-700">
-                            <AccordionTrigger className="text-sm text-white hover:text-white hover:no-underline">
-                              View document list
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                                <ul className="space-y-3">
-                                  {org.documents.map((doc) => (
-                                    <li key={doc.file_name} className="text-sm">
-                                      <a 
-                                        href={doc.preview_link} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-blue-300 hover:text-blue-200 hover:underline"
-                                      >
-                                        {doc.title}
-                                      </a>
-                                      <div className="text-xs text-gray-400 mt-1">
-                                        {doc.year} • {Array.isArray(doc.regions) ? doc.regions.join(", ") : doc.regions}
-                                      </div>
-                                      <p className="text-xs mt-1">{doc.description}</p>
-                                    </li>
-                                  ))}
-                                </ul>
+              <div className="bg-black/50 p-4 rounded-md border border-white/10">
+                <h3 className="text-lg font-medium text-white">How do I view specific matches in a document?</h3>
+                <p className="text-white/80">
+                  Click on a search result card to view the document. Then, click on any match in the expanded card to
+                  navigate directly to that page in the document.
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-4">
+            {/* Document Library content */}
+            <div className="documents-library">
+              <h2 className="text-xl font-semibold mb-4 text-white">Document Library</h2>
+
+              {loading ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-white" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-4 text-red-400">
+                  <p>{error}</p>
+                  <p className="text-sm mt-2 text-white/70">Please try again later or contact support.</p>
+                </div>
+              ) : organizationDocs.length === 0 ? (
+                <p className="text-center py-4 text-white">No documents available.</p>
+              ) : (
+                <Accordion type="single" collapsible className="w-full">
+                  {organizationDocs.map((orgDoc, index) => (
+                    <AccordionItem key={index} value={`org-${index}`} className="border-b border-white/20">
+                      <AccordionTrigger className="text-left font-medium hover:no-underline text-white px-4 py-2">
+                        {orgDoc.organization}{" "}
+                        <Badge className="ml-2 bg-white/20 text-white">{orgDoc.documents.length}</Badge>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pt-2 pb-4">
+                        <div className="space-y-3 pl-2">
+                          {orgDoc.documents.map((doc, docIndex) => (
+                            <div key={docIndex} className="p-3 bg-black/40 rounded-md border border-white/10">
+                              <div className="font-medium text-white">{doc.title || doc.file_name}</div>
+
+                              {doc.year && <div className="text-sm text-white/70 mt-1">Year: {doc.year}</div>}
+
+                              {doc.description && <div className="text-sm mt-2 text-white/90">{doc.description}</div>}
+
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {doc.countries && doc.countries.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {doc.countries.map((country, idx) => (
+                                      <Badge key={idx} variant="outline" className="text-xs text-white border-white/30">
+                                        {country}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {doc.regions && doc.regions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {doc.regions.map((region, idx) => (
+                                      <Badge key={idx} className="text-xs bg-white/20 text-white">
+                                        {region}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
 
-            <AccordionItem value="item-4" className="border-gray-700">
-              <AccordionTrigger className="text-white hover:text-white hover:no-underline">
-                Can I suggest new documents?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                <p>
-                  Yes! We're always looking to expand our collection of survey instruments. If you have suggestions 
-                  for additional documents that should be included in Survey Accelerator, please email us at:
-                </p>
-                <p className="mt-2 font-medium">surveyaccelerator@idinsight.org</p>
-                <p className="mt-2">
-                  Please include the name of the survey, the organization that produced it, and any links or 
-                  attachments to the questionnaire if available.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <div className="flex justify-end pt-4">
-            <Button variant="outline" onClick={onClose} className="border-gray-600 text-white hover:bg-white/10">
-              Close
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                              {doc.preview_link && (
+                                <a
+                                  href={doc.preview_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-block mt-3 text-sm text-blue-300 hover:underline"
+                                >
+                                  View Document
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   )
 }
 
