@@ -13,7 +13,7 @@ from app.ingestion.fetch_utils.google_drive_utils import download_all_files
 from app.ingestion.models import DocumentDB, save_all_to_db
 from app.ingestion.process_utils.embedding_utils import process_files
 from app.ingestion.schemas import AirtableIngestionResponse, DocumentPreview
-from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_gcp
+from app.ingestion.storage_utils.gcp_storage_utils import upload_files_to_local
 
 from ..database import get_async_session
 from .schemas import OrganizationDocuments
@@ -67,18 +67,18 @@ async def airtable_refresh_and_ingest() -> AirtableIngestionResponse:
 
     logger.info(f"Downloaded {len(downloaded_files)} files")
 
-    # Upload files to GCP
+    # Upload files to local
     upload_semaphore = asyncio.Semaphore(MAX_CONCURRENT_UPLOADS)
-    uploaded_files = await upload_files_to_gcp(downloaded_files, upload_semaphore)
+    uploaded_files = await upload_files_to_local(downloaded_files, upload_semaphore)
 
     if not uploaded_files:
         return AirtableIngestionResponse(
             total_records_processed=0,
             total_chunks_created=0,
-            message="No files were uploaded to GCP.",
+            message="No files were uploaded to folder.",
         )
 
-    logger.info(f"Uploaded {len(uploaded_files)} files to GCP")
+    logger.info(f"Uploaded {len(uploaded_files)} files to folder")
 
     # Process files (text extraction and embedding)
     process_semaphore = asyncio.Semaphore(MAX_CONCURRENT_PROCESSING)
