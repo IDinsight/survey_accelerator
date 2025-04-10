@@ -5,14 +5,14 @@ services:
     build:
       context: ../../backend
       dockerfile: Dockerfile
-    restart: always
+    restart: always    
     env_file:
       - ./.backend.env
       - ./.base.env
     ports:
       - "8000:8000"
     volumes:
-      - temp:/usr/src/aaq_backend/temp
+      - uploaded_files:/uploaded_files
       - ../../backend/.gcp_credentials.json:/app/credentials.json
     depends_on:
       - postgres
@@ -25,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - 5434:5432  # Expose the port to port 5434 on the host machine for debugging
+      - 5432:5432  
 
   frontend:
     build:
@@ -59,3 +59,4 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  uploaded_files:

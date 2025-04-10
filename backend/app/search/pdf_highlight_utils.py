@@ -11,7 +11,8 @@ import aiohttp
 import fitz
 from app.utils import setup_logger
 from fastapi import HTTPException
-from fastapi.staticfiles import StaticFiles
+
+LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 
 logger = setup_logger()
 
@@ -329,69 +330,3 @@ def _add_highlights(input_path: str, output_path: str, search_terms: str) -> Non
         logger.error(f"Error adding highlights to PDF: {e}")
         raise Exception(f"Failed to add highlights: {str(e)}")
 
-
-def setup_static_file_serving(app):
-    """
-    Set up serving of highlighted PDFs as static files.
-
-    Args:
-        app: FastAPI app instance
-    """
-    # Mount the directory containing highlighted PDFs
-    app.mount(
-        "/highlighted_pdfs",
-        StaticFiles(directory=HIGHLIGHT_DIR),
-        name="highlighted_pdfs",
-    )
-
-    # Also serve the PDF viewer HTML file at the root
-    import os
-
-    # Copy the PDF viewer HTML file to the static directory if needed
-    viewer_path = os.path.join(HIGHLIGHT_DIR, "pdf-viewer.html")
-    if not os.path.exists(viewer_path):
-        logger.info("Creating PDF viewer HTML file")
-        with open(viewer_path, "w") as f:
-            f.write("""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Viewer</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
-</head>
-<body>
-    <iframe id="pdfFrame" allowfullscreen></iframe>
-    <script>
-        // Parse URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileUrl = urlParams.get('file');
-        const pageNum = urlParams.get('page');
-        
-        // Set up the iframe source
-        if (fileUrl) {
-            let viewerUrl = fileUrl;
-            if (pageNum) {
-                viewerUrl += `#page=${pageNum}`;
-            }
-            document.getElementById('pdfFrame').src = viewerUrl;
-        } else {
-            document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: No PDF file specified</div>';
-        }
-    </script>
-</body>
-</html>""")
-
-    logger.info("Mounted highlighted PDFs directory at /highlighted_pdfs")

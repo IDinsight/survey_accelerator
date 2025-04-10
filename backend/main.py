@@ -3,7 +3,7 @@ import os
 import sys
 from types import FrameType
 from typing import Any, Dict, Optional
-
+import uvicorn
 from app.config import BACKEND_ROOT_PATH
 from gunicorn.app.base import BaseApplication
 from gunicorn.glogging import Logger
@@ -115,7 +115,6 @@ if __name__ == "__main__":
     logger.configure(handlers=[{"sink": sys.stdout, "serialize": JSON_LOGS}])
 
     # Use uvicorn directly with auto-reload
-    import uvicorn
 
     logger.info("Starting server with auto-reload enabled")
     uvicorn.run(

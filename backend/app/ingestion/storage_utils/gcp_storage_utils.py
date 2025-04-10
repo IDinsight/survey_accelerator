@@ -10,8 +10,7 @@ logger = setup_logger()
 # Define the directory for locally saved files (e.g., "./uploaded_files")
 LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
-
+DOMAIN = os.environ.get("DOMAIN", "localhost:8000")
 
 def save_file_buffer_to_local(
     file_buffer: io.BytesIO, file_name: str, content_type: str = "application/pdf"
@@ -39,8 +38,7 @@ def save_file_buffer_to_local(
             f.write(file_buffer.read())
 
         # Construct a URL for access.
-        # Assuming you'll mount the local directory in your static file serving, e.g. "/uploaded_files"
-        pdf_url = f"{BASE_URL}/uploaded_files/{file_name}"
+        pdf_url = f"https://{DOMAIN}/api/pdf/{file_name}"
         return pdf_url
 
     except Exception as e:

@@ -2,13 +2,10 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from . import auth, ingestion, search, users
-from .search.pdf_highlight_utils import setup_static_file_serving
+from . import auth, ingestion, search, users, pdfs
 from .utils import setup_logger
 
-LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 
 logger = setup_logger()
 
@@ -21,19 +18,13 @@ def create_app() -> FastAPI:
         title="Survey Accelerator",
         debug=True,
     )
-
+    logger.info("Creating FastAPI application")
     app.include_router(ingestion.router)
     app.include_router(search.router)
     app.include_router(users.router)
     app.include_router(auth.router)
-
-    # Set up static file serving for highlighted PDFs
-    setup_static_file_serving(app)
-    app.mount(
-        "/uploaded_files",
-        StaticFiles(directory=LOCAL_UPLOAD_DIR),
-        name="uploaded_files",
-    )
+    app.include_router(pdfs.router)
+    
 
     origins = [
         "http://localhost",
