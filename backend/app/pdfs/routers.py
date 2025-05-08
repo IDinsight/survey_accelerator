@@ -13,8 +13,8 @@ TAG_METADATA = {
     "description": "Distribute PDFs.",
 }
 
-HIGHLIGHT_DIR = "./highlighted_pdfs"
-UPLOADED_DIR = "/uploaded_files"
+HIGHLIGHT_DIR = os.getenv("HIGHLIGHT_DIR", "./highlighted_pdfs")
+LOCAL_UPLOAD_DIR = os.getenv("LOCAL_UPLOAD_DIR", "./uploaded_files")
 
 def create_pdf_response(file_path: str) -> FileResponse:
     if not os.path.exists(file_path):
@@ -30,7 +30,7 @@ def create_pdf_response(file_path: str) -> FileResponse:
 @router.get("/pdf/{filename}")
 async def serve_pdf(
     filename: str,
-    type: str = Query("regular", description="Type of PDF: regular or highlighted")
+    type: str = Query("regular", enum=["regular", "highlighted"]),
 ):
     """
     Serve PDFs based on the type.
@@ -39,9 +39,9 @@ async def serve_pdf(
       - type=highlighted: serves PDFs from highlighted_pdfs
     """
     logger.error(f"Serving PDF: {filename} of type: {type}")
-    logger.error("Available PDFs: %s", os.listdir(UPLOADED_DIR))
+    logger.error("Available PDFs: %s", os.listdir(HIGHLIGHT_DIR))
     if type == "regular":
-        file_path = os.path.join(UPLOADED_DIR, filename)
+        file_path = os.path.join(LOCAL_UPLOAD_DIR, filename)
     elif type == "highlighted":
         file_path = os.path.join(HIGHLIGHT_DIR, filename)
     else:
