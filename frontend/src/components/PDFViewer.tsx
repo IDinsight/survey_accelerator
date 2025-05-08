@@ -1,32 +1,24 @@
-"use client"
+"use client";
 
-import { type FC, useMemo } from "react"
+import { useMemo } from "react";
 
 interface PDFViewerProps {
-  pdfUrl: string
-  pageNumber?: number
+  // A fully constructed PDF URL returned by the backend
+  pdfUrl: string;
+  // Optionally, the page number to display
+  pageNumber?: number;
 }
 
-const PDFViewer: FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
-  // Process the PDF URL
+const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
   const processedUrl = useMemo(() => {
-    if (!pdfUrl) return ""
-    const isHighlightedPdf = pdfUrl.includes("/highlighted_pdfs/")
-    const backendUrl = "http://localhost:8000"
-    let fullUrl
-    if (isHighlightedPdf) {
-      const cleanPath = pdfUrl.startsWith("/") ? pdfUrl.substring(1) : pdfUrl
-      fullUrl = `${backendUrl}/${cleanPath}`
-    } else {
-      fullUrl = pdfUrl
-    }
-    return pageNumber ? `${fullUrl}#page=${pageNumber}` : fullUrl
-  }, [pdfUrl, pageNumber])
+    if (!pdfUrl) return "";
+    // If a pageNumber is provided, append the page anchor to the provided URL.
+    return pageNumber ? `${pdfUrl}#page=${pageNumber}` : pdfUrl;
+  }, [pdfUrl, pageNumber]);
 
   return (
     <div className="relative w-full h-full rounded-lg overflow-hidden">
       {pdfUrl ? (
-        // When there's a PDF to display, show it with a glass effect
         <div className="w-full h-full bg-black/30 backdrop-blur-sm rounded-lg">
           <object
             key={`pdf-${pdfUrl}-${pageNumber || "default"}`}
@@ -41,7 +33,6 @@ const PDFViewer: FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
           </object>
         </div>
       ) : (
-        // When there's no PDF, just show the text directly on the background
         <div className="absolute inset-0 flex items-center justify-center">
           <p className="text-white text-center leading-7">
             Enter a query in the left panel to search.
@@ -51,7 +42,7 @@ const PDFViewer: FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default PDFViewer
+export default PDFViewer;
