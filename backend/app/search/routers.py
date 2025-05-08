@@ -50,7 +50,6 @@ async def search_generic(
         )
 
         if not results:
-            logger.info("This is happening")
             return GenericSearchResponse(
                 query=request.query, results=[], message="No matching documents found."
             )
