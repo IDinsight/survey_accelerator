@@ -13,6 +13,7 @@ services:
       - "8000:8000"
     volumes:
       - uploaded_files:/uploaded_files
+      - highlighted_pdfs:/highlighted_pdfs
       - ../../backend/.gcp_credentials.json:/app/credentials.json
     depends_on:
       - postgres
@@ -60,3 +61,4 @@ volumes:
   caddy_data:
   caddy_config:
   uploaded_files:
+  highlighted_pdfs:
