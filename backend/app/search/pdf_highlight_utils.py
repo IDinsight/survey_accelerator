@@ -12,9 +12,9 @@ import fitz
 from app.utils import setup_logger
 from fastapi import HTTPException
 
-LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
-
 logger = setup_logger()
+
+BASE_URL = os.environ.get("BASE_URL", "https://survey.idinsight.io")
 
 # Directory to store highlighted PDFs
 HIGHLIGHT_DIR = os.environ.get("HIGHLIGHT_DIR", "./highlighted_pdfs")
@@ -30,7 +30,6 @@ processing_pdfs: Dict[str, asyncio.Task] = {}
 async def get_highlighted_pdf(
     pdf_url: str,
     search_term: str,
-    bucket_url_prefix: Optional[str] = None,
     page_keywords: Optional[Dict[int, List[str]]] = None,
 ) -> str:
     """
@@ -40,7 +39,6 @@ async def get_highlighted_pdf(
     Args:
         pdf_url: URL to the original PDF
         search_term: Text to highlight in the PDF (used as fallback)
-        bucket_url_prefix: Optional URL prefix for cloud storage bucket
         page_keywords: Optional dict mapping page numbers to keywords to highlight on that page
 
     Returns:
@@ -62,11 +60,8 @@ async def get_highlighted_pdf(
 
     # Check if the highlighted PDF already exists
     if os.path.exists(highlighted_path):
-        logger.info(f"Found pre-highlighted PDF for {pdf_url}")
         return (
-            f"/highlighted_pdfs/{pdf_filename}"
-            if not bucket_url_prefix
-            else f"{bucket_url_prefix}/{pdf_filename}"
+            f"{BASE_URL}/api/pdf/{pdf_filename}?type=highlighted"
         )
 
     # Check if this PDF is already being processed
@@ -90,11 +85,8 @@ async def get_highlighted_pdf(
     try:
         # Wait for the task to complete
         await task
-        logger.info(f"Successfully created highlighted PDF for {pdf_url}")
         return (
-            f"/highlighted_pdfs/{pdf_filename}"
-            if not bucket_url_prefix
-            else f"{bucket_url_prefix}/{pdf_filename}"
+            f"{BASE_URL}/api/pdf/{pdf_filename}?type=highlighted"
         )
     except Exception as e:
         logger.error(f"Error highlighting PDF {pdf_url}: {e}")
