@@ -1,4 +1,4 @@
-survey.idinsight.io {
+$DOMAIN {
     # Route API requests to the backend
     handle /api/* {
         uri strip_prefix /api
