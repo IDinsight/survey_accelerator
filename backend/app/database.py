@@ -1,5 +1,4 @@
 import contextlib
-import os
 from collections.abc import AsyncGenerator, Generator
 from typing import ContextManager, Union
 
@@ -15,8 +14,6 @@ from .config import (
     POSTGRES_PORT,
     POSTGRES_USER,
 )
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
 
 SYNC_DB_API = "psycopg2"
 ASYNC_DB_API = "asyncpg"

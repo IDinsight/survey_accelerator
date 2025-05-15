@@ -2,6 +2,7 @@ import asyncio
 import io
 import os
 from typing import Any, Dict, List
+from urllib.parse import quote, urljoin
 
 from ...utils import setup_logger
 
@@ -10,7 +11,20 @@ logger = setup_logger()
 # Define the directory for locally saved files (e.g., "./uploaded_files")
 LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
-DOMAIN = os.environ.get("DOMAIN", "localhost:8000")
+
+# Ensure BACKEND_API_URL includes scheme
+BACKEND_API_URL = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
+
+
+def make_pdf_url(filename: str, mode: str = "regular") -> str:
+    """
+    Build a correctly encoded URL for accessing PDFs:
+      http://host:port/pdf/<percent-encoded-filename>?type=<mode>
+    """
+    safe_name = quote(filename, safe="")
+    path = f"/pdf/{safe_name}?type={mode}"
+    return urljoin(BACKEND_API_URL, path)
+
 
 def save_file_buffer_to_local(
     file_buffer: io.BytesIO, file_name: str, content_type: str = "application/pdf"
@@ -37,8 +51,8 @@ def save_file_buffer_to_local(
         with open(local_path, "wb") as f:
             f.write(file_buffer.read())
 
-        # Construct a URL for access.
-        pdf_url = f"https://{DOMAIN}/api/pdf/{file_name}"
+        # Construct a URL for access using the helper
+        pdf_url = make_pdf_url(file_name, mode="regular")
         return pdf_url
 
     except Exception as e:
@@ -53,7 +67,7 @@ async def upload_files_to_local(
     Saves files to local disk concurrently and updates metadata with the file URLs.
     """
 
-    async def save_local(metadata):
+    async def save_local(metadata: Dict[str, Any]) -> Dict[str, Any]:
         async with semaphore:
             file_name = metadata["file_name"]
             file_buffer = metadata["file_buffer"]
