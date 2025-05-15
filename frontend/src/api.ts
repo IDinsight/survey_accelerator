@@ -2,7 +2,6 @@ import axios from "axios"
 
 const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
 const authToken = process.env.NEXT_PUBLIC_BACKEND_PW || "kk"
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000"
 
 const getToken = () => localStorage.getItem("token") || ""
 

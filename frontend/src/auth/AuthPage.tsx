@@ -362,7 +362,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             {authMode === "login" && (
-              <Button variant="link" className="px-0 text-white" onClick={() => changeAuthMode("forgot")}>
+              <Button variant="link" className="px-0 text-yellow-500" onClick={() => changeAuthMode("forgot")}>
                 Forgot Password?
               </Button>
             )}
@@ -371,7 +371,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
               {authMode === "login" ? (
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-sm text-white">Don't have an account?</span>
-                  <Button variant="link" className="p-0 h-auto text-white" onClick={() => changeAuthMode("signup")}>
+                  <Button variant="link" className="p-0 h-auto text-yellow-500" onClick={() => changeAuthMode("signup")}>
                     Sign Up
                   </Button>
                 </div>
@@ -385,7 +385,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
               ) : (
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-sm text-white">Remembered your password?</span>
-                  <Button variant="link" className="p-0 h-auto text-white" onClick={() => changeAuthMode("login")}>
+                  <Button variant="link" className="p-0 h-auto text-yellow-500" onClick={() => changeAuthMode("login")}>
                     Sign In
                   </Button>
                 </div>
