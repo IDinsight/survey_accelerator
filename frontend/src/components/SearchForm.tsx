@@ -18,6 +18,7 @@ interface SearchFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
   loading: boolean
   onHistoryClick?: () => void
+  onClear?: () => void
 }
 
 // Custom checkbox component
@@ -146,7 +147,7 @@ const CustomDropdown: FC<{
   )
 }
 
-const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) => {
+const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, onClear }) => {
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([])
   const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -282,6 +283,11 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
     setSearchQuery("")
     setSelectedOrgs([])
     setSelectedSurveyTypes([])
+
+    // Call the parent's onClear if provided
+    if (onClear) {
+      onClear()
+    }
   }
 
   return (
@@ -299,19 +305,42 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Enter your search query"
-            className="pr-10 text-white placeholder-white/70 focus-visible:ring-transparent"
+            className="pr-20 text-white placeholder-white/70 focus-visible:ring-transparent"
             required
             ref={searchInputRef}
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute inset-y-0 right-0 flex items-center pr-3"
-            >
-              <X className="h-4 w-4 text-white/70" />
-            </button>
-          )}
+          <div className="absolute inset-y-0 right-0 flex items-center">
+            {/* History Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    onClick={handleHistoryClick}
+                    className={`h-8 w-8 mr-1 rounded-full ${
+                      showHistory ? "bg-[#a05e1b]" : "bg-transparent"
+                    } hover:bg-[#cc7722]/20 flex items-center justify-center history-button`}
+                  >
+                    <YoutubeSearchedForIcon className="h-4 w-4 text-white/70 hover:text-white" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Search history</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Clear Button */}
+            {searchQuery && (
+              <Button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="h-8 w-8 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center"
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search History Dropdown */}
@@ -378,7 +407,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
         />
       </div>
 
-      {/* Submit and History Buttons */}
+      {/* Submit and Clear Buttons */}
       <div className="flex items-stretch mt-4 gap-3">
         <Button
           type="submit"
@@ -400,33 +429,14 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick }) 
             <TooltipTrigger asChild>
               <Button
                 type="button"
-                onClick={handleHistoryClick}
-                className={`w-12 ${
-                  showHistory ? "bg-[#a05e1b]" : "bg-[#cc7722]"
-                } text-white hover:bg-[#b88a01] flex items-center justify-center history-button`}
-              >
-                <YoutubeSearchedForIcon className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Search history</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
                 onClick={handleClear}
-                className="w-12 bg-gray-600 text-white hover:bg-gray-700 flex items-center justify-center"
+                className="w-20 bg-yellow-500 text-black hover:bg-yellow-400 flex items-center justify-center"
               >
-                <X className="h-5 w-5" />
+                <span>Clear</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Clear all filters</p>
+              <p>Clear all filters and results</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

@@ -142,6 +142,20 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     // If you want to store in DB, you would make an API call here
   }
 
+  const handleClearResults = () => {
+    // Clear all search results
+    setSearchResults([])
+
+    // Clear PDF viewer state
+    setSelectedPDF(null)
+    setSelectedCardId(null)
+    setCurrentPageNumber(null)
+    setSelectedHighlightedId(null)
+
+    // Optional: Show a message to the user
+    toast.info("Search results and PDF view cleared")
+  }
+
   // Create a default user object if none is provided
   const defaultUser = {
     email: localStorage.getItem("email") || "user@example.com",
@@ -227,7 +241,11 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
 
             {/* Search form with glass effect */}
             <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4 search-form-container">
-              <SearchForm onSubmit={handleSearch} loading={loading} />
+              <SearchForm
+                onSubmit={handleSearch}
+                loading={loading}
+                onClear={handleClearResults}
+              />
             </div>
           </div>
 
