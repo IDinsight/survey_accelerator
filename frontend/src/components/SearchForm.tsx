@@ -388,7 +388,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
           options={organizations}
           selectedOptions={selectedOrgs}
           onChange={setSelectedOrgs}
-          placeholder="Select Organizations"
+          placeholder="Filter by Organizations (Optional)"
           label="Organization"
           isLoading={isLoadingOptions}
         />
@@ -401,7 +401,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
           options={surveyTypes}
           selectedOptions={selectedSurveyTypes}
           onChange={setSelectedSurveyTypes}
-          placeholder="Select Survey Types"
+          placeholder="Filter by Survey Types (Optional)"
           label="Survey Type"
           isLoading={isLoadingOptions}
         />
