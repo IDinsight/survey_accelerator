@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 interface PDFViewerProps {
   // A fully constructed PDF URL returned by the backend
@@ -10,6 +10,42 @@ interface PDFViewerProps {
 }
 
 const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
+  const exampleQueries = [
+    "child mortality rates",
+    "vaccination coverage",
+    "maternal health indicators",
+    "school enrollment statistics",
+    "agricultural productivity",
+    "clean water access",
+    "gender equality metrics",
+    "community health programs",
+  ];
+
+  const [currentQueryIndex, setCurrentQueryIndex] = useState(0);
+  const [nextQueryIndex, setNextQueryIndex] = useState(1);
+  const [animationState, setAnimationState] = useState("idle"); // "idle" | "animating"
+
+  // Rotate through example queries with sliding animation
+  useEffect(() => {
+    const queryDisplayTime = 2500; // Change frequency: every 2.5 seconds
+    const animationDuration = 1800; // Keep the same slow, smooth animation duration
+
+    const rotationInterval = setInterval(() => {
+      // Start the animation
+      setAnimationState("animating");
+
+      // After animation completes, update indices and reset animation state
+      setTimeout(() => {
+        setCurrentQueryIndex(nextQueryIndex);
+        setNextQueryIndex((nextQueryIndex + 1) % exampleQueries.length);
+        setAnimationState("idle");
+      }, animationDuration);
+
+    }, queryDisplayTime);
+
+    return () => clearInterval(rotationInterval);
+  }, [nextQueryIndex, exampleQueries.length]);
+
   const processedUrl = useMemo(() => {
     if (!pdfUrl) return "";
     // If a pageNumber is provided, append the page anchor to the provided URL.
@@ -33,12 +69,43 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
           </object>
         </div>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-white text-center leading-7">
-            Enter a query in the left panel to search.
-            <br />
-            PDF previews with highlights tailored to your search will then be shown here.
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <p className="text-white text-center text-3xl font-inter mb-4">
+            Try searching for:
           </p>
+          {/* Outer wrapper with mask to clip content outside boundaries */}
+          <div
+            className="relative h-16 w-full"
+            style={{
+              maskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)'
+            }}
+          >
+            {/* Inner animation container */}
+            <div className="relative h-full w-full overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center">
+                {/* Current query - visible and slides down and out when animating */}
+                <div
+                  key={`current-${currentQueryIndex}`}
+                  className={`absolute text-white text-center transition-transform duration-[1800ms] ease-in-out ${
+                    animationState === "animating" ? 'transform translate-y-[130%]' : 'transform translate-y-0'
+                  }`}
+                >
+                  <p className="text-4xl font-bold font-inter">{exampleQueries[currentQueryIndex]}</p>
+                </div>
+
+                {/* Next query that slides in from above */}
+                <div
+                  key={`next-${nextQueryIndex}`}
+                  className={`absolute text-white text-center transition-transform duration-[1800ms] ease-in-out ${
+                    animationState === "animating" ? 'transform translate-y-0' : 'transform -translate-y-[130%]'
+                  }`}
+                >
+                  <p className="text-4xl font-bold font-inter">{exampleQueries[nextQueryIndex]}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
