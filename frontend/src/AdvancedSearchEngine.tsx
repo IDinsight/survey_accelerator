@@ -194,48 +194,49 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <div className="mb-2">
-            {/* Logo and icons in a single row */}
-            <div className="flex flex-col mb-2">
+            {/* Logo and icons in a single row - buttons overlapping the logo */}
+            <div className="flex flex-col mb-2 relative">
               {/* Full-width logo */}
               <div className="w-full mb-1">
                 <img
-                  src="/SurveyAcceleratorLogo-White.svg"
+                  src="/SurveyAcceleratorLogo-Stacked-White.svg"
                   alt="Survey Accelerator"
                   className="w-full h-auto object-contain"
                 />
               </div>
 
-              {/* Icons row - very compact */}
-              <div className="flex justify-end">
-                <div className="flex gap-1">
-                  <Button
-                    onClick={() => setShowFAQ(true)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                    title="Help"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={() => setShowSettings(true)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                    title="Settings"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={handleLogout}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/10 h-7 w-7 p-0"
-                    title="Logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
+              {/* Icons row - positioned to overlap with logo */}
+              <div className="flex justify-end w-full absolute bottom-3 right-0">
+                <Button
+                  onClick={() => setShowFAQ(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
+                  title="Help"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span>Help</span>
+                </Button>
+                <Button
+                  onClick={() => setShowSettings(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
+                  title="Settings"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  <span>Settings</span>
+                </Button>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 text-xs"
+                  title="Logout"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Logout</span>
+                </Button>
               </div>
             </div>
 
