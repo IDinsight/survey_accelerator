@@ -146,7 +146,11 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
             <Button
               type="button"
               variant="ghost"
-              className="flex w-full justify-between items-center p-0 hover:bg-transparent hover:text-white"
+              className={`flex w-full justify-between items-center ${
+                showPasswordChange
+                  ? "p-0 hover:bg-transparent hover:text-white"
+                  : "border-2 border-white text-white hover:bg-white/10 p-2"
+              }`}
               onClick={() => setShowPasswordChange(!showPasswordChange)}
             >
               <span className="text-sm font-medium">Change Password</span>
@@ -154,7 +158,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ user, onClose, onUpdateRe
             </Button>
 
             {showPasswordChange && (
-              <form onSubmit={handlePasswordChange} className="mt-3 space-y-3">
+              <form onSubmit={handlePasswordChange} className="mt-3 space-y-3 p-3 border border-white/20 rounded-md bg-white/5">
                 <div className="space-y-1">
                   <Label htmlFor="current-password">Current Password</Label>
                   <Input
