@@ -5,7 +5,7 @@ import { type FC, useState, useRef, useEffect } from "react"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
 import { Label } from "../components/ui/label"
-import { Check, ChevronDown, Loader2, Clock, X } from 'lucide-react'
+import { Check, ChevronDown, Loader2, Clock, X, ChevronUp } from 'lucide-react'
 import { cn } from "../lib/utils"
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
@@ -157,6 +157,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
   const [organizations, setOrganizations] = useState<string[]>([])
   const [surveyTypes, setSurveyTypes] = useState<string[]>([])
   const [isLoadingOptions, setIsLoadingOptions] = useState(true)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const historyRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"
@@ -381,31 +382,54 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
         )}
       </div>
 
-      {/* Organizations Dropdown */}
-      <div>
-        <Label className="block text-sm font-medium text-white mb-1">Organizations</Label>
-        <CustomDropdown
-          options={organizations}
-          selectedOptions={selectedOrgs}
-          onChange={setSelectedOrgs}
-          placeholder="Filter by Organizations (Optional)"
-          label="Organization"
-          isLoading={isLoadingOptions}
-        />
+      {/* Advanced Settings Toggle */}
+      <div className="flex justify-center items-center my-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="bg-black/70 text-white hover:bg-black/90 text-sm px-4 py-1 h-auto flex items-center gap-2 border-gray-700"
+          onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+        >
+          <span>Advanced settings</span>
+          {showAdvancedSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
+        {(selectedOrgs.length > 0 || selectedSurveyTypes.length > 0) && (
+          <span className="text-xs text-white/70 ml-2">
+            {selectedOrgs.length + selectedSurveyTypes.length} filter{selectedOrgs.length + selectedSurveyTypes.length !== 1 ? 's' : ''} applied
+          </span>
+        )}
       </div>
 
-      {/* Survey Type Dropdown */}
-      <div>
-        <Label className="block text-sm font-medium text-white mb-1">Survey Types</Label>
-        <CustomDropdown
-          options={surveyTypes}
-          selectedOptions={selectedSurveyTypes}
-          onChange={setSelectedSurveyTypes}
-          placeholder="Filter by Survey Types (Optional)"
-          label="Survey Type"
-          isLoading={isLoadingOptions}
-        />
-      </div>
+      {/* Advanced Settings Section */}
+      {showAdvancedSettings && (
+        <div className="p-4 bg-black/10 backdrop-blur-lg rounded-lg border border-white/30 relative z-[60]">
+          {/* Organizations Dropdown */}
+          <div className="mb-4">
+            <Label className="block text-sm font-medium text-white mb-1">Organizations</Label>
+            <CustomDropdown
+              options={organizations}
+              selectedOptions={selectedOrgs}
+              onChange={setSelectedOrgs}
+              placeholder="Filter by Organizations (Optional)"
+              label="Organization"
+              isLoading={isLoadingOptions}
+            />
+          </div>
+
+          {/* Survey Type Dropdown */}
+          <div>
+            <Label className="block text-sm font-medium text-white mb-1">Survey Types</Label>
+            <CustomDropdown
+              options={surveyTypes}
+              selectedOptions={selectedSurveyTypes}
+              onChange={setSelectedSurveyTypes}
+              placeholder="Filter by Survey Types (Optional)"
+              label="Survey Type"
+              isLoading={isLoadingOptions}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Submit and Clear Buttons */}
       <div className="flex items-stretch mt-4 gap-3">
