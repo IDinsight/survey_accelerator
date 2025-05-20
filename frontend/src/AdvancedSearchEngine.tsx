@@ -16,7 +16,6 @@ import { LogOut, Settings, HelpCircle } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 import "./styles/dropdown.css"
-import Footer from "./components/Footer"
 
 interface User {
   email: string
@@ -74,6 +73,14 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     try {
       // Call the API with the correct parameters
       const results = await searchDocuments(query, organizations, survey_types)
+
+      // Check if we have no results but filters were applied
+      if (results.length === 0 && (organizations.length > 0 || survey_types.length > 0)) {
+        toast.info("No results match your filters", {
+          description: "Try broadening your search by removing some filters.",
+          duration: 5000,
+        })
+      }
 
       // Sort results by number of strong matches
       const sortedResults = results
@@ -280,11 +287,6 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
           </div>
         </div>
       </div>
-
-      {/* Footer - only shown when no PDF is selected */}
-      {!selectedPDF && (
-        <Footer />
-      )}
     </IslandLayout>
   )
 }
