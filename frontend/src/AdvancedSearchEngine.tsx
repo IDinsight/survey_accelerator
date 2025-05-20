@@ -206,7 +206,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
               </div>
 
               {/* Icons row - positioned to overlap with logo */}
-              <div className="flex justify-end w-full absolute bottom-3 right-3">
+              <div className="flex justify-end w-full absolute bottom-3 right-0">
                 <Button
                   onClick={() => setShowFAQ(true)}
                   variant="outline"
