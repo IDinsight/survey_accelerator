@@ -16,6 +16,7 @@ import { LogOut, Settings, HelpCircle } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 import "./styles/dropdown.css"
+import Footer from "./components/Footer"
 
 interface User {
   email: string
@@ -279,6 +280,11 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
           </div>
         </div>
       </div>
+
+      {/* Footer - only shown when no PDF is selected */}
+      {!selectedPDF && (
+        <Footer />
+      )}
     </IslandLayout>
   )
 }
