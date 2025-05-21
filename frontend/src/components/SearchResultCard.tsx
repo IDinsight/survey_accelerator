@@ -23,13 +23,13 @@ const MatchIcon: FC<{ className?: string }> = ({ className }) => {
 const getStrengthColor = (strength: "strong" | "moderate" | "weak") => {
   switch (strength) {
     case "strong":
-      return "bg-green-500/80 text-white"
+      return "bg-green-600 text-white" // Darker green for strong matches
     case "moderate":
-      return "bg-green-300/60 text-white"
+      return "bg-amber-500 text-white" // Amber/orange for moderate matches
     case "weak":
-      return "bg-gray-400/60 text-white"
+      return "bg-gray-600 text-white" // Darker gray for weak matches
     default:
-      return "bg-gray-400/60 text-white"
+      return "bg-gray-600 text-white"
   }
 }
 
@@ -90,7 +90,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
     <div>
       <Card
         onClick={handleCardClick}
-        className={`cursor-pointer z-1 transition-all duration-200 border-0 backdrop-blur-sm ${
+        className={`cursor-pointer z-1 transition-all duration-200 border-none ${
           isSelected
             ? "bg-[#CC7722]/80 shadow-lg transform scale-[1.01]"
             : "bg-black/30 hover:bg-black/40 hover:shadow-md"
@@ -167,7 +167,10 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
                 className={`
                   bg-black/30 hover:bg-black/40 text-white cursor-pointer
                   transition-all duration-200 rounded-lg backdrop-blur-sm
-                  ${selectedHighlightedId === match.rank ? "border-l-4 border-[#CC7722]" : ""}
+                  ${selectedHighlightedId === match.rank
+                    ? "border border-white border-l-4"
+                    : "border border-[#CC7722]/70 border-opacity-50"
+                  }
                 `}
                 onClick={(e) => {
                   e.stopPropagation()
