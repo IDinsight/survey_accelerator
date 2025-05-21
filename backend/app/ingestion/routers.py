@@ -159,6 +159,7 @@ async def get_documents_grouped_by_organization(
             DocumentDB.regions,
             DocumentDB.title,
             DocumentDB.organizations,
+            DocumentDB.survey_type,
         )
         .distinct(DocumentDB.document_id)
         .order_by(DocumentDB.document_id, DocumentDB.created_datetime_utc.desc())
@@ -194,6 +195,7 @@ async def get_documents_grouped_by_organization(
             description=data.get("summary"),
             countries=data.get("countries"),
             regions=data.get("regions"),
+            survey_type=data.get("survey_type"),
         )
         org_docs_map[org_name].documents.append(doc_preview)
     return_list = list(org_docs_map.values())

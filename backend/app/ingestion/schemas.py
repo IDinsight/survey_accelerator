@@ -17,9 +17,10 @@ class DocumentPreview(BaseModel):
     file_name: str
     preview_link: Optional[str]
     year: Optional[int]
-    description: Optional[str]  
-    countries: Optional[Any] 
+    description: Optional[str]
+    countries: Optional[Any]
     regions: Optional[Any]
+    survey_type: Optional[str]
 
 
 class OrganizationDocuments(BaseModel):

@@ -20,6 +20,7 @@ interface DocumentPreview {
   description: string | null
   countries: string[] | null
   regions: string[] | null
+  survey_type: string | null
 }
 
 interface OrganizationDocuments {
@@ -39,6 +40,7 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("faq")
+  const [groupBy, setGroupBy] = useState<"organization" | "survey_type">("organization")
 
   // Fetch documents when the modal is opened
   useEffect(() => {
@@ -77,6 +79,34 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
       }
     })
     .filter((orgDoc) => orgDoc.documents.length > 0) // Only include orgs with matching documents
+
+  // Function to transform documents based on groupBy selection
+  const getGroupedDocuments = () => {
+    if (groupBy === "organization") {
+      return filteredOrganizationDocs
+    } else {
+      // Group by survey type
+      const surveyTypeMap: Record<string, { organization: string; documents: DocumentPreview[] }> = {}
+
+      filteredOrganizationDocs.forEach((orgDoc) => {
+        orgDoc.documents.forEach((doc) => {
+          // Handle case where document doesn't have survey type info
+          const surveyType = doc.survey_type || "Uncategorized"
+
+          if (!surveyTypeMap[surveyType]) {
+            surveyTypeMap[surveyType] = {
+              organization: surveyType,
+              documents: [],
+            }
+          }
+
+          surveyTypeMap[surveyType].documents.push(doc)
+        })
+      })
+
+      return Object.values(surveyTypeMap)
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -267,16 +297,42 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
 
             {activeTab === "documents" && (
               <div className="flex flex-col h-[calc(80vh-140px)]">
-                <div className="flex items-center mb-4">
-                  <h2 className="text-xl font-semibold text-white">Document Library</h2>
-                  <div className="relative ml-auto w-1/2">
-                    <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
-                    <Input
-                      placeholder="Search documents by title..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 bg-black/30 border-white/30 text-white placeholder:text-white/50 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                    />
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-xl font-semibold text-white">Document Library</h2>
+
+                    <div className="relative ml-auto w-1/3">
+                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
+                      <Input
+                        placeholder="Search documents by title..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 bg-black/30 border-white/30 text-white placeholder:text-white/50 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Group by toggle switch - moved down and left-aligned */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-white mr-1">Group by:</span>
+                    <span className={`text-sm ${groupBy === "organization" ? "text-white" : "text-white/60"}`}>
+                      Organization
+                    </span>
+                    <div
+                      className="relative w-12 h-6 bg-black/50 rounded-full cursor-pointer border border-white/30"
+                      onClick={() =>
+                        setGroupBy(groupBy === "organization" ? "survey_type" : "organization")
+                      }
+                    >
+                      <div
+                        className={`absolute top-[1px] w-5 h-5 rounded-full transition-transform duration-200 ease-in-out ${
+                          groupBy === "organization" ? "left-0.5 bg-white" : "left-6 bg-[#CC7722]"
+                        }`}
+                      />
+                    </div>
+                    <span className={`text-sm ${groupBy === "survey_type" ? "text-white" : "text-white/60"}`}>
+                      Survey Type
+                    </span>
                   </div>
                 </div>
 
@@ -296,7 +352,7 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                     </div>
                   ) : (
                     <Accordion type="multiple" className="w-full pb-8">
-                      {filteredOrganizationDocs.map((orgDoc, index) => (
+                      {getGroupedDocuments().map((orgDoc, index) => (
                         <AccordionItem key={index} value={`org-${index}`} className="border-b border-white/20">
                           <AccordionTrigger className="text-left font-medium hover:no-underline text-white px-4 py-2 flex justify-between">
                             <span>{orgDoc.organization}</span>
