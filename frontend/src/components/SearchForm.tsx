@@ -296,7 +296,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
       {/* Search Query Input */}
       <div className="dropdown-container">
         <Label htmlFor="search" className="block text-sm font-medium text-white">
-          Search Query
+          Search
         </Label>
         <div className="relative mt-1">
           <Input
@@ -305,7 +305,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Enter your search query"
+            placeholder="Enter your search term"
             className="pr-20 text-white placeholder-white/70 focus-visible:ring-transparent"
             required
             ref={searchInputRef}
