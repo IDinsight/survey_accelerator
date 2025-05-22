@@ -3,9 +3,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import auth, ingestion, search, users, pdfs
+from . import auth, contributions, ingestion, pdfs, search, users
 from .utils import setup_logger
-
 
 logger = setup_logger()
 
@@ -24,7 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router)
     app.include_router(auth.router)
     app.include_router(pdfs.router)
-    
+    app.include_router(contributions.router)
 
     origins = [
         "http://localhost",
