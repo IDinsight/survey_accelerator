@@ -12,6 +12,7 @@ import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import Particles from "react-tsparticles"
 import type { Engine } from "tsparticles-engine"
 import { loadSlim } from "tsparticles-slim"
+import Footer from "../components/Footer"
 
 type AuthMode = "login" | "signup" | "forgot"
 
@@ -412,29 +413,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         </Card>
       </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-4 left-0 right-0 z-20 text-center">
-        <p className="text-white/70 text-base md:text-lg">
-          Made by the Tech Team at{" "}
-          <a
-            href="https://www.idinsight.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-yellow-500 hover:text-yellow-400 transition-colors font-medium"
-          >
-            IDinsight
-          </a>
-          {" | "}
-          <a
-            href="https://dsem.idinsight.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-yellow-500 hover:text-yellow-400 transition-colors font-medium"
-          >
-            DSEM @ IDinsight
-          </a>
-        </p>
-      </div>
+      <Footer />
     </div>
   )
 }

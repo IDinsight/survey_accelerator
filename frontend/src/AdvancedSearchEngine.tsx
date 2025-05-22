@@ -10,6 +10,7 @@ import IslandLayout from "./components/IslandLayout"
 import SettingsPopup from "./components/SettingsPopup"
 import FAQModal from "./components/FAQModal"
 import ContributeSurveyModal from "./components/ContributeSurveyModal"
+import Footer from "./components/Footer"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
@@ -304,6 +305,9 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
           </div>
         </div>
       </div>
+
+      {/* Footer - Always visible at the bottom */}
+      <Footer />
     </IslandLayout>
   )
 }
