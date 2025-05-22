@@ -278,3 +278,61 @@ export const fetchSurveyTypes = async (): Promise<string[]> => {
     return [] // Return empty array as fallback
   }
 }
+
+// New function to handle survey contributions
+export const contributeSurvey = async (formData: FormData): Promise<any> => {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.post(`${backendUrl}/contributions/submit`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+      timeout: 60000, // 60 seconds timeout for file upload
+    })
+
+    return response.data || {}
+  } catch (error: any) {
+    console.error("Error submitting survey contribution:", error)
+
+    if (error.response && error.response.data && error.response.data.detail) {
+      throw new Error(error.response.data.detail)
+    }
+
+    throw new Error(error.message || "Failed to submit survey contribution.")
+  }
+}
+
+// Function to get the current user's profile details
+export const getUserProfile = async (): Promise<any> => {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.get(`${backendUrl}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 25000,
+    })
+
+    return response.data || {}
+  } catch (error: any) {
+    console.error("Error fetching user profile:", error)
+
+    if (error.response && error.response.data && error.response.data.detail) {
+      throw new Error(error.response.data.detail)
+    }
+
+    throw new Error(error.message || "Failed to fetch user profile.")
+  }
+}

@@ -9,10 +9,11 @@ import PDFViewer from "./components/PDFViewer"
 import IslandLayout from "./components/IslandLayout"
 import SettingsPopup from "./components/SettingsPopup"
 import FAQModal from "./components/FAQModal"
+import ContributeSurveyModal from "./components/ContributeSurveyModal"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
-import { LogOut, Settings, HelpCircle } from "lucide-react"
+import { LogOut, Settings, HelpCircle, Upload } from "lucide-react"
 import { Button } from "./components/ui/button"
 import "./styles/scrollbar.css"
 import "./styles/dropdown.css"
@@ -36,6 +37,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
   const [loading, setLoading] = useState<boolean>(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showFAQ, setShowFAQ] = useState(false)
+  const [showContributeModal, setShowContributeModal] = useState(false)
   const [resultsCount, setResultsCount] = useState(25) // Default to 25 results
 
   // Load saved preferences on component mount
@@ -198,14 +200,19 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
 
       <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
 
+      <ContributeSurveyModal
+        isOpen={showContributeModal}
+        onClose={() => setShowContributeModal(false)}
+      />
+
       <div className="grid grid-cols-[28%_72%] h-screen">
         {/* Left Panel */}
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <div className="mb-2">
-            {/* Logo and icons in a single row - buttons overlapping the logo */}
-            <div className="flex flex-col mb-2 relative">
+            {/* Logo and icons in separate rows with proper spacing */}
+            <div className="flex flex-col mb-4">
               {/* Full-width logo */}
-              <div className="w-full mb-1">
+              <div className="w-full">
                 <img
                   src="/SurveyAcceleratorLogo-Stacked-White.svg"
                   alt="Survey Accelerator"
@@ -213,8 +220,8 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
                 />
               </div>
 
-              {/* Icons row - positioned to overlap with logo */}
-              <div className="flex justify-end w-full absolute bottom-3 right-3">
+              {/* Utility buttons row - positioned below the logo */}
+              <div className="flex justify-end w-full mt-2">
                 <Button
                   onClick={() => setShowFAQ(true)}
                   variant="outline"
@@ -239,11 +246,21 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
                   onClick={handleLogout}
                   variant="outline"
                   size="sm"
-                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 text-xs"
+                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
                   title="Logout"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   <span>Logout</span>
+                </Button>
+                <Button
+                  onClick={() => setShowContributeModal(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 text-xs"
+                  title="Contribute Survey"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Contribute</span>
                 </Button>
               </div>
             </div>
