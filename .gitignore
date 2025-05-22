@@ -163,3 +163,5 @@ node_modules/
 gcp_credentials.json
 backend/highlighted_pdfs/
 backend/uploaded_files/
+
+backend/uploaded_contributions/

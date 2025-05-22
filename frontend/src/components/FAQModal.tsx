@@ -204,9 +204,12 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                       Can I add to the database of surveys?
                     </AccordionTrigger>
                     <AccordionContent className="text-white/80 px-4 pb-4">
-                      Currently, adding new documents to the database requires administrator access. If you have surveys
-                      or documents you'd like to contribute, please contact the Survey Accelerator team at
-                      surveyaccelerator@idinsight.org with details about your documents.
+                      Yes! You can contribute surveys to the database by clicking the "Contribute Survey" button in the
+                      top navigation bar. You'll be asked to provide the survey title, optional details like survey
+                      type and origin organization, and a justification for why the survey should be included. If you
+                      have a PDF version of the survey, you can optionally upload it. All submissions are reviewed by
+                      the Survey Accelerator team before being added to the database. Please ensure you have the right
+                      to share any survey you contribute.
                     </AccordionContent>
                   </AccordionItem>
 
