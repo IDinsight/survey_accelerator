@@ -208,7 +208,7 @@ const ContributeSurveyModal: React.FC<ContributeSurveyModalProps> = ({ isOpen, o
                 name="justification"
                 value={formData.justification}
                 onChange={handleInputChange}
-                placeholder="Please explain why this survey is valuable and should be included in the Survey Accelerator database..."
+                placeholder="Please explain why this survey is valuable and should be included in the Survey Accelerator database"
                 required
                 className="min-h-[120px] bg-black/30 border-white/20 text-white placeholder:text-white/50"
               />
