@@ -71,7 +71,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <p className="text-white text-center text-3xl font-inter mb-4">
-            Try searching for:
+            Try searching for
           </p>
           {/* Outer wrapper with mask to clip content outside boundaries */}
           <div
@@ -106,6 +106,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
               </div>
             </div>
           </div>
+          <p className="text-white text-center text-3xl font-inter mt-4">
+            then select a card to view results
+          </p>
         </div>
       )}
     </div>
