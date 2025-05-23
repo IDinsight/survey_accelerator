@@ -222,12 +222,12 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
               </div>
 
               {/* Utility buttons row - positioned below the logo */}
-              <div className="flex justify-end w-full mt-2">
+              <div className="flex flex-wrap justify-between w-full mt-2 gap-2 px-0">
                 <Button
                   onClick={() => setShowFAQ(true)}
                   variant="outline"
                   size="sm"
-                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
+                  className="flex-1 text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center justify-center gap-1 px-2 py-0.5 h-7 text-xs md:max-w-[calc(25%-8px)]"
                   title="Help"
                 >
                   <HelpCircle className="h-3.5 w-3.5" />
@@ -237,42 +237,44 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
                   onClick={() => setShowSettings(true)}
                   variant="outline"
                   size="sm"
-                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
+                  className="flex-1 text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center justify-center gap-1 px-2 py-0.5 h-7 text-xs md:max-w-[calc(25%-8px)]"
                   title="Settings"
                 >
                   <Settings className="h-3.5 w-3.5" />
                   <span>Settings</span>
                 </Button>
                 <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  size="sm"
-                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 mr-2 text-xs"
-                  title="Logout"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span>Logout</span>
-                </Button>
-                <Button
                   onClick={() => setShowContributeModal(true)}
                   variant="outline"
                   size="sm"
-                  className="text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center gap-1 px-2 py-0.5 h-7 text-xs"
+                  className="flex-1 text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center justify-center gap-1 px-2 py-0.5 h-7 text-xs md:max-w-[calc(25%-8px)]"
                   title="Contribute Survey"
                 >
                   <Upload className="h-3.5 w-3.5" />
                   <span>Contribute</span>
                 </Button>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-white bg-black/70 hover:bg-black/90 backdrop-blur-sm border-gray-700 flex items-center justify-center gap-1 px-2 py-0.5 h-7 text-xs md:max-w-[calc(25%-8px)]"
+                  title="Logout"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Logout</span>
+                </Button>
               </div>
             </div>
 
             {/* Search form with glass effect */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-4 search-form-container">
-              <SearchForm
-                onSubmit={handleSearch}
-                loading={loading}
-                onClear={handleClearResults}
-              />
+            <div className="bg-black/30 backdrop-blur-sm rounded-lg px-0 search-form-container">
+              <div className="p-4">
+                <SearchForm
+                  onSubmit={handleSearch}
+                  loading={loading}
+                  onClear={handleClearResults}
+                />
+              </div>
             </div>
           </div>
 
