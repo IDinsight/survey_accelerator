@@ -10,6 +10,7 @@ from app.ingestion.models import DocumentDB
 from app.search.openai_utils import (
     extract_highlight_keyphrase,
     generate_query_match_explanation,
+    rank_search_results,
 )
 from app.search.schemas import DocumentMetadata, DocumentSearchResult, MatchedChunk
 from app.utils import setup_logger
@@ -168,50 +169,35 @@ async def hybrid_search(
         }
         combined_results = list(unique_matches.values())
 
-        # Prepare for reranking: collect texts and match info.
-        texts = []
-        match_info = []
-        for doc, _score in combined_results:
-            texts.append(doc.contextualized_chunk)
-            match_info.append(
-                {
-                    "doc": doc,
-                    "page_number": doc.page_number,
-                }
+        # Prepare documents for LLM-based reranking
+        document_chunks = []
+        for i, (doc, _score) in enumerate(combined_results):
+            document_chunks.append(
+                {"doc": doc, "page_number": doc.page_number, "index": i}  # Keep track of original index for later
             )
 
-        if not texts:
+        if not document_chunks:
             return []
 
-        # Rerank using Cohere (or another service).
-        rerank_response = co.rerank(
-            model="rerank-english-v3.0",
-            query=query_str,
-            documents=texts,
-            top_n=None,
-            return_documents=False,
+        # Use our new LLM-based reranker
+        reranked_results = await rank_search_results(
+            query=query_str, document_chunks=document_chunks
         )
 
-        # Assemble reranked matches with strength labels.
-        reranked_matches = []
-        for rank_index, result_item in enumerate(rerank_response.results):
-            index = result_item.index
-            info = match_info[index]
-            doc = info["doc"]
+        # Convert the reranked results to the expected format for further processing
+        top_matches = []
+        for ranked_item in reranked_results[:max_results]:
             match_result = {
-                "doc": doc,
-                "page_number": info["page_number"],
-                "rank": rank_index + 1,
-                "strength": (
-                    "Strong"
-                    if (rank_index + 1) <= 12
-                    else "Moderate" if (rank_index + 1) <= 20 else "Weak"
-                ),
+                "doc": ranked_item["doc"],
+                "page_number": ranked_item["page_number"],
+                "rank": ranked_item["rank"],
+                "strength": ranked_item["strength"],
+                # Adding the new score fields to be available for the frontend
+                "contextual_score": ranked_item["contextual_score"],
+                "direct_match_score": ranked_item["direct_match_score"],
+                "match_type": ranked_item["match_type"],
             }
-            reranked_matches.append(match_result)
-
-        # Take top matches according to the provided max_results.
-        top_matches = reranked_matches[:max_results]
+            top_matches.append(match_result)
 
         # Generate explanations and extract highlight keyphrases concurrently.
         explanation_tasks = [
@@ -241,6 +227,11 @@ async def hybrid_search(
                     "strong_count": 0,
                     "moderate_count": 0,
                     "weak_count": 0,
+                    "contextual_score_sum": 0,  # Track total contextual score
+                    "direct_score_sum": 0,      # Track total direct match score
+                    "contextual_matches": 0,    # Count of contextual matches
+                    "direct_matches": 0,        # Count of direct matches
+                    "balanced_matches": 0       # Count of balanced matches
                 }
             # Count strengths.
             if match["strength"] == "Strong":
@@ -249,27 +240,46 @@ async def hybrid_search(
                 documents_group[document_id]["moderate_count"] += 1
             else:
                 documents_group[document_id]["weak_count"] += 1
+                
+            # Track match types and scores
+            contextual_score = match.get("contextual_score", 5)
+            direct_score = match.get("direct_match_score", 5)
+            match_type = match.get("match_type", "balanced")
+            
+            documents_group[document_id]["contextual_score_sum"] += contextual_score
+            documents_group[document_id]["direct_score_sum"] += direct_score
+            
+            if match_type == "contextual":
+                documents_group[document_id]["contextual_matches"] += 1
+            elif match_type == "direct":
+                documents_group[document_id]["direct_matches"] += 1
+            elif match_type == "balanced":
+                documents_group[document_id]["balanced_matches"] += 1
 
+            # Create a matched chunk with both traditional and new ranking information
             matched_chunk = MatchedChunk(
                 page_number=match["page_number"],
                 rank=match["rank"],
                 explanation=explanations[i],
-                starting_keyphrase=(
-                    keyphrases[i]
-                    if keyphrases[i]
-                    else (
-                        doc.contextualized_chunk[:30]
-                        if doc.contextualized_chunk
-                        else ""
-                    )
+                starting_keyphrase=keyphrases[i] if keyphrases[i] else (
+                    doc.contextualized_chunk[:30] if doc.contextualized_chunk else ""
                 ),
+                # Add the new detailed scoring data
+                contextual_score=match.get("contextual_score", 5),
+                direct_match_score=match.get("direct_match_score", 5),
+                match_type=match.get("match_type", "balanced"),
             )
             documents_group[document_id]["matches"].append(matched_chunk)
 
-        # Sort documents by strong_count (primary) and moderate_count (secondary).
+        # Sort documents by score factors: strong count, average scores, moderate count
         sorted_documents = sorted(
             documents_group.values(),
-            key=lambda d: (d["strong_count"], d["moderate_count"], -d["weak_count"]),
+            key=lambda d: (
+                d["strong_count"], 
+                (d["contextual_score_sum"] + d["direct_score_sum"]) / max(len(d["matches"]), 1),
+                d["moderate_count"], 
+                -d["weak_count"]
+            ),
             reverse=True,
         )
 
@@ -278,6 +288,10 @@ async def hybrid_search(
                 metadata=create_metadata(doc_entry["doc"]),
                 matches=doc_entry["matches"],
                 num_matches=len(doc_entry["matches"]),
+                # Add new match type summary stats
+                contextual_matches=doc_entry["contextual_matches"],
+                direct_matches=doc_entry["direct_matches"],
+                balanced_matches=doc_entry["balanced_matches"],
             )
             for doc_entry in sorted_documents
         ]

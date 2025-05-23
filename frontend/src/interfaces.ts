@@ -13,6 +13,10 @@ export interface DocumentSearchResult {
   matches: Match[]
   num_matches?: number
   strongMatchesCount?: number
+  // New match type counters
+  contextual_matches?: number
+  direct_matches?: number
+  balanced_matches?: number
 }
 
 export interface Match {
@@ -22,6 +26,10 @@ export interface Match {
   explanation: string
   starting_keyphrase?: string
   strength?: "strong" | "moderate" | "weak"
+  // New match type and scoring fields
+  contextual_score?: number
+  direct_match_score?: number
+  match_type?: "contextual" | "direct" | "balanced"
 }
 
 export interface MatchedChunk {

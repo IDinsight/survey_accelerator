@@ -37,6 +37,10 @@ class MatchedChunk(BaseModel):
     rank: int
     explanation: str
     starting_keyphrase: str = ""
+    # New fields for detailed scoring
+    contextual_score: Optional[float] = None
+    direct_match_score: Optional[float] = None
+    match_type: Optional[str] = None
 
 
 class GenericDocumentSearchResult(BaseModel):
@@ -61,6 +65,10 @@ class DocumentSearchResult(BaseModel):
     metadata: DocumentMetadata
     matches: List[MatchedChunk]
     num_matches: Optional[int] = None
+    # New fields for match type statistics
+    contextual_matches: Optional[int] = 0
+    direct_matches: Optional[int] = 0
+    balanced_matches: Optional[int] = 0
 
 
 class SearchResponse(BaseModel):

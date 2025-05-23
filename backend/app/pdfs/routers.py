@@ -38,8 +38,6 @@ async def serve_pdf(
       - type=regular: serves PDFs from uploaded_files
       - type=highlighted: serves PDFs from highlighted_pdfs
     """
-    logger.error(f"Serving PDF: {filename} of type: {type}")
-    logger.error("Available PDFs: %s", os.listdir(HIGHLIGHT_DIR))
     if type == "regular":
         file_path = os.path.join(LOCAL_UPLOAD_DIR, filename)
     elif type == "highlighted":

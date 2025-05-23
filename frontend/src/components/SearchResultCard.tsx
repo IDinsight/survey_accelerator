@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "./ui/card"
 import type { DocumentSearchResult } from "../interfaces"
 import { getMatchStrength } from "../interfaces"
-import { MapPin, Building, FileSearch } from 'lucide-react'
+import { MapPin, Building, FileSearch, Brain, TextSearch, BarChart2 } from 'lucide-react'
 
 interface SearchResultCardProps {
   result: DocumentSearchResult
@@ -33,6 +33,30 @@ const getStrengthColor = (strength: "strong" | "moderate" | "weak") => {
   }
 }
 
+// Helper function to get match type icon and color
+const getMatchTypeInfo = (matchType: string | undefined) => {
+  switch (matchType) {
+    case "direct":
+      return {
+        icon: <TextSearch className="h-3.5 w-3.5" />,
+        color: "bg-blue-500 text-white",
+        label: "Direct"
+      }
+    case "contextual":
+      return {
+        icon: <Brain className="h-3.5 w-3.5" />,
+        color: "bg-purple-500 text-white",
+        label: "Context"
+      }
+    default:
+      return {
+        icon: <BarChart2 className="h-3.5 w-3.5" />,
+        color: "bg-teal-500 text-white",
+        label: "Balanced"
+      }
+  }
+}
+
 const SearchResultCard: FC<SearchResultCardProps> = ({
   result,
   onClick,
@@ -50,6 +74,11 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
 
   // Count strong matches for display
   const strongMatchesCount = matchesWithStrength.filter((m) => m.strength === "strong").length
+  
+  // Match type counts (with fallback for older data)
+  const contextualCount = result.contextual_matches || 0
+  const directCount = result.direct_matches || 0
+  const balancedCount = result.balanced_matches || 0
 
   // Auto-expand when selected
   useEffect(() => {
@@ -73,7 +102,6 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
 
   // Calculate match text
   const matchesText = `${result.matches.length} ${result.matches.length === 1 ? "Match" : "Matches"}`
-  const strongText = strongMatchesCount > 0 ? `${strongMatchesCount} Strong` : ""
 
   const handleCardClick = () => {
     if (isSelected) {
@@ -131,8 +159,31 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           {/* Description - now full width with no wrapping around badge */}
           <p className="text-sm text-white/90 mt-0.5 mb-2">{result.metadata.summary || "No summary available"}</p>
 
-          {/* Badge now at the bottom right */}
-          <div className="flex justify-end">
+          {/* Match stats badges */}
+          <div className="flex justify-between items-center">
+            {/* Match Type Distribution */}
+            <div className="flex gap-1">
+              {directCount > 0 && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-medium bg-blue-500/80 text-white">
+                  <TextSearch className="h-3 w-3" />
+                  <span>{directCount} Direct</span>
+                </div>
+              )}
+              {contextualCount > 0 && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-medium bg-purple-500/80 text-white">
+                  <Brain className="h-3 w-3" />
+                  <span>{contextualCount} Context</span>
+                </div>
+              )}
+              {balancedCount > 0 && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-medium bg-teal-500/80 text-white">
+                  <BarChart2 className="h-3 w-3" />
+                  <span>{balancedCount} Balanced</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Total Match Count */}
             <div
               className={`
                 flex items-center gap-1 px-2 py-1 rounded-md -mb-3.5
@@ -143,7 +194,7 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
               <MatchIcon className="h-3.5 w-3.5" />
               <span>
                 {matchesText}
-                {strongMatchesCount > 0 && <span className="ml-1">• {strongText}</span>}
+                {strongMatchesCount > 0 && <span className="ml-1">• {strongMatchesCount} Strong</span>}
               </span>
             </div>
           </div>
@@ -160,7 +211,12 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
           {matchesWithStrength.map((match, index) => {
             const strength = match.strength || "weak"
             const strengthColor = getStrengthColor(strength)
-
+            const matchTypeInfo = getMatchTypeInfo(match.match_type)
+            
+            // Calculate score indicators for contextual and direct matches
+            const contextualScore = match.contextual_score || 5
+            const directScore = match.direct_match_score || 5
+            
             return (
               <div
                 key={index}
@@ -178,15 +234,60 @@ const SearchResultCard: FC<SearchResultCardProps> = ({
                 }}
               >
                 <div className="p-2">
-                  <div className="flex justify-between items-center mb-0.5">
+                  {/* Top row with page number, match type and strength */}
+                  <div className="flex justify-between items-center mb-1">
                     <div className="text-xs text-white/90">Page {match.page_number}</div>
-                    <div className={`text-xs px-2 py-0.5 rounded-full ${strengthColor}`}>
-                      {strength.charAt(0).toUpperCase() + strength.slice(1)}
+                    <div className="flex gap-1 items-center">
+                      {/* Match type indicator */}
+                      <div className={`text-xs px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${matchTypeInfo.color}`}>
+                        {matchTypeInfo.icon}
+                        <span>{matchTypeInfo.label}</span>
+                      </div>
+                      
+                      {/* Strength indicator */}
+                      <div className={`text-xs px-2 py-0.5 rounded-full ${strengthColor}`}>
+                        {strength.charAt(0).toUpperCase() + strength.slice(1)}
+                      </div>
                     </div>
                   </div>
 
                   {/* Display the explanation */}
-                  <p className="text-sm mt-0.5 mb-0 leading-tight">{match.explanation || "No explanation available"}</p>
+                  <p className="text-sm mt-0.5 mb-1 leading-tight">{match.explanation || "No explanation available"}</p>
+                  
+                  {/* Score bars */}
+                  <div className="mt-1 grid grid-cols-2 gap-2 px-1">
+                    {/* Contextual score bar */}
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-center mb-0.5 text-xs">
+                        <span className="text-purple-300 flex items-center">
+                          <Brain className="h-3 w-3 mr-0.5" /> Context
+                        </span>
+                        <span>{contextualScore}/10</span>
+                      </div>
+                      <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-purple-500 rounded-full" 
+                          style={{ width: `${contextualScore * 10}%` }} 
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Direct score bar */}
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-center mb-0.5 text-xs">
+                        <span className="text-blue-300 flex items-center">
+                          <TextSearch className="h-3 w-3 mr-0.5" /> Direct
+                        </span>
+                        <span>{directScore}/10</span>
+                      </div>
+                      <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 rounded-full" 
+                          style={{ width: `${directScore * 10}%` }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )
