@@ -173,7 +173,11 @@ async def hybrid_search(
         document_chunks = []
         for i, (doc, _score) in enumerate(combined_results):
             document_chunks.append(
-                {"doc": doc, "page_number": doc.page_number, "index": i}  # Keep track of original index for later
+                {
+                    "doc": doc,
+                    "page_number": doc.page_number,
+                    "index": i,
+                }  # Keep track of original index for later
             )
 
         if not document_chunks:
@@ -228,10 +232,10 @@ async def hybrid_search(
                     "moderate_count": 0,
                     "weak_count": 0,
                     "contextual_score_sum": 0,  # Track total contextual score
-                    "direct_score_sum": 0,      # Track total direct match score
-                    "contextual_matches": 0,    # Count of contextual matches
-                    "direct_matches": 0,        # Count of direct matches
-                    "balanced_matches": 0       # Count of balanced matches
+                    "direct_score_sum": 0,  # Track total direct match score
+                    "contextual_matches": 0,  # Count of contextual matches
+                    "direct_matches": 0,  # Count of direct matches
+                    "balanced_matches": 0,  # Count of balanced matches
                 }
             # Count strengths.
             if match["strength"] == "Strong":
@@ -240,15 +244,15 @@ async def hybrid_search(
                 documents_group[document_id]["moderate_count"] += 1
             else:
                 documents_group[document_id]["weak_count"] += 1
-                
+
             # Track match types and scores
             contextual_score = match.get("contextual_score", 5)
             direct_score = match.get("direct_match_score", 5)
             match_type = match.get("match_type", "balanced")
-            
+
             documents_group[document_id]["contextual_score_sum"] += contextual_score
             documents_group[document_id]["direct_score_sum"] += direct_score
-            
+
             if match_type == "contextual":
                 documents_group[document_id]["contextual_matches"] += 1
             elif match_type == "direct":
@@ -261,8 +265,14 @@ async def hybrid_search(
                 page_number=match["page_number"],
                 rank=match["rank"],
                 explanation=explanations[i],
-                starting_keyphrase=keyphrases[i] if keyphrases[i] else (
-                    doc.contextualized_chunk[:30] if doc.contextualized_chunk else ""
+                starting_keyphrase=(
+                    keyphrases[i]
+                    if keyphrases[i]
+                    else (
+                        doc.contextualized_chunk[:30]
+                        if doc.contextualized_chunk
+                        else ""
+                    )
                 ),
                 # Add the new detailed scoring data
                 contextual_score=match.get("contextual_score", 5),
@@ -275,10 +285,11 @@ async def hybrid_search(
         sorted_documents = sorted(
             documents_group.values(),
             key=lambda d: (
-                d["strong_count"], 
-                (d["contextual_score_sum"] + d["direct_score_sum"]) / max(len(d["matches"]), 1),
-                d["moderate_count"], 
-                -d["weak_count"]
+                d["strong_count"],
+                (d["contextual_score_sum"] + d["direct_score_sum"])
+                / max(len(d["matches"]), 1),
+                d["moderate_count"],
+                -d["weak_count"],
             ),
             reverse=True,
         )
