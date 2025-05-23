@@ -309,6 +309,7 @@ const SearchForm: FC<SearchFormProps> = ({ onSubmit, loading, onHistoryClick, on
             className="pr-20 text-white placeholder-white/70 focus-visible:ring-transparent"
             required
             ref={searchInputRef}
+            autoComplete="off"
           />
           <div className="absolute inset-y-0 right-0 flex items-center">
             {/* History Button */}
