@@ -3,10 +3,9 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.models import Base
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models import Base
 
 
 class FeedbackDB(Base):
@@ -18,7 +17,9 @@ class FeedbackDB(Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.user_id"), nullable=False
     )
-    feedback_type: Mapped[str] = mapped_column(String, nullable=False)  # 'like' or 'dislike'
+    feedback_type: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # 'like' or 'dislike'
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     search_term: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
