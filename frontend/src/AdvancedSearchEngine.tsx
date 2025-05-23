@@ -309,7 +309,7 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
       </div>
 
       {/* Footer - Always visible at the bottom */}
-      <Footer />
+      <Footer isPdfShowing={selectedPDF !== null} />
     </IslandLayout>
   )
 }
