@@ -120,7 +120,7 @@ async def send_survey_contribution_email(
     message["Subject"] = f"New Survey Contribution: {survey_title}"
     message["From"] = "Survey Accelerator Support"
     message["To"] = admin_email
-    message["Cc"] = "mark.botterill@idinsight.org"
+    message["Cc"] = "mark.botterill@idinsight.org, doug.johnson@idinsight.org"
 
     # Set the plain text content as a fallback
     message.set_content(

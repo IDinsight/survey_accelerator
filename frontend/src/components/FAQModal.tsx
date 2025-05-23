@@ -255,6 +255,16 @@ const FAQModal: React.FC<FAQModalProps> = ({ onClose, isOpen = false }) => {
                     </AccordionContent>
                   </AccordionItem>
 
+                  <AccordionItem value="match-types" className="border-b border-white/20">
+                    <AccordionTrigger className="text-white hover:no-underline py-4 px-4">
+                      What's the difference between direct and contextual matches?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-white/80 px-4 pb-4">
+                      <p><strong>Direct matches:</strong> Strong matches with the source text; the page highlighted contains text which directly relates to what you are looking for.</p>
+                      <p className="mt-2"><strong>Contextual matches:</strong> Pages that lie within a section that matches the broader context of what you are searching for, but may not itself contain text relating to your query.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+
                   <AccordionItem value="change-password" className="border-b border-white/20">
                     <AccordionTrigger className="text-white hover:no-underline py-4 px-4">
                       How do I change my password?
