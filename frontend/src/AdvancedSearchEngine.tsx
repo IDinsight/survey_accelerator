@@ -11,6 +11,7 @@ import SettingsPopup from "./components/SettingsPopup"
 import FAQModal from "./components/FAQModal"
 import ContributeSurveyModal from "./components/ContributeSurveyModal"
 import Footer from "./components/Footer"
+import FeedbackComponent from "./components/FeedbackComponent"
 import { searchDocuments } from "./api"
 import type { DocumentSearchResult } from "./interfaces"
 import { getMatchStrength } from "./interfaces"
@@ -40,6 +41,8 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
   const [showFAQ, setShowFAQ] = useState(false)
   const [showContributeModal, setShowContributeModal] = useState(false)
   const [resultsCount, setResultsCount] = useState(25) // Default to 25 results
+  const [currentSearchTerm, setCurrentSearchTerm] = useState<string>("")
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(false)
 
   // Load saved preferences on component mount
   useEffect(() => {
@@ -54,6 +57,8 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     setLoading(true)
     const formData = new FormData(event.currentTarget)
     const query = formData.get("search") as string
+    setCurrentSearchTerm(query)
+    setFeedbackSubmitted(false) // Reset feedback status when performing a new search
 
     // Parse the JSON strings from hidden inputs
     let organizations: string[] = []
@@ -188,6 +193,10 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
     }
   }
 
+  const handleFeedbackSubmitted = () => {
+    setFeedbackSubmitted(true);
+  };
+
   return (
     <IslandLayout>
       {showSettings && (
@@ -280,7 +289,19 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
 
           {/* Search results without glass effect */}
           <div className="results-container">
-            {searchResults.length > 0 && <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>}
+            {searchResults.length > 0 && (
+              <>
+                {/* Feedback component - shown only when search results are available and feedback hasn't been submitted */}
+                {currentSearchTerm && !feedbackSubmitted && (
+                  <FeedbackComponent 
+                    searchTerm={currentSearchTerm}
+                    onFeedbackSubmitted={handleFeedbackSubmitted}
+                  />
+                )}
+                
+                <h3 className="text-xl font-semibold text-white mb-2 text-center">Results</h3>
+              </>
+            )}
             <div className="space-y-3">
               {searchResults.map((result) => (
                 <SearchResultCard

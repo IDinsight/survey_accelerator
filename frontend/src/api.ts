@@ -336,3 +336,44 @@ export const getUserProfile = async (): Promise<any> => {
     throw new Error(error.message || "Failed to fetch user profile.")
   }
 }
+
+// Function to submit user feedback
+export interface FeedbackData {
+  feedbackType: "like" | "dislike";
+  comment?: string;
+  search_term: string;
+}
+
+export const submitFeedback = async (feedbackData: FeedbackData): Promise<any> => {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      throw new Error("Authentication token not found")
+    }
+
+    const response = await axios.post(
+      `${backendUrl}/feedback/submit`,
+      {
+        feedback_type: feedbackData.feedbackType,
+        comment: feedbackData.comment || null,
+        search_term: feedbackData.search_term
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000, // 10 seconds timeout
+      }
+    )
+    return response.data
+  } catch (error: any) {
+    console.error("Error submitting feedback:", error)
+    
+    if (error.response && error.response.data && error.response.data.detail) {
+      throw new Error(error.response.data.detail)
+    }
+    
+    throw new Error("Failed to submit feedback.")
+  }
+}
