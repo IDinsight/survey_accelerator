@@ -1,11 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { ThumbsUp, ThumbsDown, Send } from "lucide-react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { toast } from "sonner";
-import { submitFeedback } from "../api";
 
 interface PDFViewerProps {
   // A fully constructed PDF URL returned by the backend
@@ -29,10 +24,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
   const [currentQueryIndex, setCurrentQueryIndex] = useState(0);
   const [nextQueryIndex, setNextQueryIndex] = useState(1);
   const [animationState, setAnimationState] = useState("idle"); // "idle" | "animating"
-  const [feedbackType, setFeedbackType] = useState<"like" | "dislike" | null>(null);
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Rotate through example queries with sliding animation
   useEffect(() => {
@@ -61,33 +52,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
     return pageNumber ? `${pdfUrl}#page=${pageNumber}` : pdfUrl;
   }, [pdfUrl, pageNumber]);
 
-  const handleFeedback = async (type: "like" | "dislike") => {
-    setFeedbackType(type);
-    setShowFeedbackForm(true);
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    try {
-      await submitFeedback({
-        feedbackType,
-        comment: feedbackText,
-        pdfUrl
-      });
-      toast.success("Thank you for your feedback!");
-      setShowFeedbackForm(false);
-      setFeedbackText("");
-      setFeedbackType(null);
-    } catch (error) {
-      toast.error("Failed to submit feedback. Please try again.");
-      console.error("Feedback submission error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="relative w-full h-full rounded-lg overflow-hidden">
       {pdfUrl ? (
@@ -103,91 +67,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, pageNumber }) => {
               <p>Unable to display PDF.</p>
             </div>
           </object>
-
-          {/* Feedback Component */}
-          <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center">
-            {!showFeedbackForm ? (
-              <div className="flex items-center gap-2 p-2 bg-black/50 backdrop-blur-sm rounded-lg">
-                <span className="text-white text-sm mr-1">Feedback</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-white hover:bg-white/20 rounded-full p-1"
-                  onClick={() => handleFeedback("like")}
-                  title="This result was helpful"
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-white hover:bg-white/20 rounded-full p-1"
-                  onClick={() => handleFeedback("dislike")}
-                  title="This result was not helpful"
-                >
-                  <ThumbsDown className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col bg-black/70 backdrop-blur-sm rounded-lg p-3 max-w-sm w-full">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white text-sm">
-                    {feedbackType === "like" ? "What was helpful?" : "What could be improved?"}
-                  </span>
-                  <div className="flex items-center">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`text-white p-1 rounded-full ${feedbackType === "like" ? "bg-green-700/30" : ""}`}
-                      disabled
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`text-white p-1 rounded-full ${feedbackType === "dislike" ? "bg-red-700/30" : ""}`}
-                      disabled
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                <Textarea 
-                  placeholder="Optional comments..."
-                  className="bg-black/30 border-white/30 text-white placeholder:text-white/50 text-sm resize-none min-h-[60px]"
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                />
-                <div className="flex justify-between mt-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-white/70 hover:text-white hover:bg-transparent p-0 h-auto text-xs"
-                    onClick={() => {
-                      setShowFeedbackForm(false);
-                      setFeedbackText("");
-                    }}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="bg-white text-black hover:bg-white/90 flex items-center gap-1 px-2 py-1 h-7 text-xs"
-                    onClick={handleSubmitFeedback}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Submitting..." : (
-                      <>
-                        Submit <Send className="h-3 w-3 ml-1" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
