@@ -4,6 +4,11 @@
         uri strip_prefix /api
         reverse_proxy backend:8000
     }
+    
+    # Route PDF requests to the backend
+    handle /pdf/* {
+        reverse_proxy backend:8000
+    }
 
     # Catch-all for all other requests to the frontend
     handle {

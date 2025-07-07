@@ -249,59 +249,87 @@ async def rank_search_results(query: str, document_chunks: list[dict]) -> list[d
                 raw_text = parts[1].strip()
 
         prompt = f"""
-        USER QUERY: "{query}"
+USER QUERY: "{query}"
 
-        Analyze this document for search relevance by scoring it on two dimensions:
-        1. CONTEXTUAL MATCH: How well the document addresses the query's intent and meaning (0-10 scale)
-        2. DIRECT TEXT MATCH: How directly the document contains exact query terms and phrases (0-10 scale)
+Score the given page on two dimensions:
+1. CONTEXTUAL MATCH (0–10): How well the page addresses the **intent** of the query (even if via paraphrase, related examples, background analysis, etc.).
+2. DIRECT QUESTION MATCH (0–10): How clearly the page contains an **explicit question** about the query topic (e.g. a survey question “Do you read to your child daily?” for “child literacy”).
 
-        You'll provide:
-        - contextual_score (0-10): Higher if document contains information relevant to the query's intent
-        - direct_match_score (0-10): Higher if document contains exact query terms or paraphrases
-        - match_type: Use these clear guidelines:
-          * "direct": if direct_match_score >= 7, indicating strong verbatim match with query terms
-          * "balanced": if direct_match_score is 4-6, showing moderate presence of query terms
-          * "contextual": if direct_match_score <= 3, meaning few or no direct query terms present
+Then assign:
+- contextual_score (1–10)
+- direct_match_score (1–10)
+- match_type:
+    • "direct"    if direct_match_score ≥ 7 (contains a clear, on‐topic question)
+    • "balanced"  if 4 ≤ direct_match_score ≤ 6
+    • "contextual" if direct_match_score ≤ 3
 
-        EXAMPLES:
+EXAMPLES
 
-        Example 1:
-        Query: "vaccination rate trends in rural areas"
-        Document: "METADATA: Page 7, Rural Health Survey Report 2022... CONTEXT: This section analyzes healthcare access... RAW TEXT: The vaccination rates in rural counties decreased by 12% between 2020-2022, compared to a 3% decrease in urban areas. Contributing factors include transportation difficulties and workforce shortages."
-        Scoring:
-        {{"contextual_score": 9, "direct_match_score": 8, "match_type": "direct"}}
-        Reasoning: High contextual score because it directly addresses vaccination rate trends in rural areas with specific statistics. High direct match score due to phrases "vaccination rates" and "rural" appearing verbatim in the RAW TEXT.
+Example 1  
+Query: "child literacy"  
+Page:  
+> RAW TEXT: “LIT4. How often do you read stories to your child?  
+> 1. Daily  2. Weekly  3. Monthly  4. Never.”  
+Scoring:
+```
+{"contextual_score": 10, "direct_match_score": 10, "match_type": "direct"}
+Reasoning: Contains an explicit survey question about reading to a child, directly addressing “child literacy.”
 
-        Example 2:
-        Query: "education program effectiveness"
-        Document: "METADATA: Page 15, Policy Analysis... CONTEXT: This is from a part of a survey that covers various policy implementations, including education and health... RAW TEXT: Government spending on infrastructure development increased by 24% since the previous fiscal year, with priority given to upgrading transportation systems."
-        Scoring:
-        {{"contextual_score": 8, "direct_match_score": 1, "match_type": "contextual"}}
-        Reasoning: Low contextual score because document discusses government infrastructure spending, not education programs. Zero direct match score because no query terms appear in the RAW TEXT.
+Example 2
+Query: "child literacy"
+Page:
 
-        Example 3:
-        Query: "child nutrition programs in schools"
-        Document: "METADATA: Page 23, Educational Policy Report... CONTEXT: This section discusses school meal programs... RAW TEXT: The school lunch program was expanded to include breakfast services, increasing overall student attendance by 7%. Teachers reported improved concentration in morning classes."
-        Scoring:
-        {{"contextual_score": 8, "direct_match_score": 5, "match_type": "balanced"}}
-        Reasoning: High contextual score because it discusses school meal programs which relate directly to child nutrition in schools. Medium direct match score because words like "school" appear but "nutrition" and "child" don't appear verbatim in the RAW TEXT.
+RAW TEXT: “Literacy levels among children improved by 15% in Region A since 2019, driven by after‐school tutoring programs.”
+Scoring:
 
-        Example 4:
-        Query: "maternal health services accessibility"
-        Document: "METADATA: Page 42, Healthcare Review 2023... CONTEXT: This reviews healthcare systems... RAW TEXT: Women in rural districts reported traveling an average of 27 kilometers to access maternal health services. Community health workers have been deployed to improve accessibility to prenatal care."
-        Scoring:
-        {{"contextual_score": 9, "direct_match_score": 9, "match_type": "direct"}}
-        Reasoning: Very high contextual score for directly addressing the topic. High direct match score because phrases "maternal health services" and "accessibility" appear verbatim in the RAW TEXT.
 
-        DOCUMENT TO ANALYZE:
-        {chunk_text[:1000]}
 
-        Return your analysis as JSON with this exact structure (no additional text):
-        {{
-          "contextual_score": N,  // 0-10 score
-          "direct_match_score": N,  // 0-10 score
-          "match_type": "direct|balanced|contextual"  // pick one based on direct_match_score thresholds
-        }}
+
+{"contextual_score": 9, "direct_match_score": 0, "match_type": "contextual"}
+Reasoning: Strong context (trend data on child literacy) but no actual question about the topic, so direct_match_score = 0.
+
+Example 3
+Query: "maternal health services accessibility"
+Page:
+
+RAW TEXT: “QMH5: How far do you travel to receive prenatal care?
+
+< 5 km 2. 5–10 km 3. > 10 km”
+Scoring:
+
+
+
+
+{"contextual_score": 10, "direct_match_score": 8, "match_type": "direct"}
+Reasoning: Contains an explicit accessibility question (“How far…prenatal care”) so high direct_match_score.
+
+Example 4
+Query: "education program effectiveness"
+Page:
+
+CONTEXT: Discusses government spending on school infrastructure.
+RAW TEXT: “Since 2020, investment in classroom buildings rose by 20%.”
+Scoring:
+
+
+
+
+{"contextual_score": 7, "direct_match_score": 2, "match_type": "contextual"}
+Reasoning: Relevant background on education investment, but no question probing program outcomes.
+
+DOCUMENT TO ANALYZE:
+{chunk_text[:20000]}
+
+Return  only, with exactly:
+
+
+
+
+{
+  "contextual_score": N,
+  "direct_match_score": N,
+  "match_type": "direct|balanced|contextual"
+}
         """
 
         try:

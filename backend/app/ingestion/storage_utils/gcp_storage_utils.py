@@ -12,8 +12,8 @@ logger = setup_logger()
 LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", "./uploaded_files")
 os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
 
-# Ensure BACKEND_API_URL includes scheme
-BACKEND_API_URL = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
+# Ensure BACKEND_API_URL includes scheme - default to production domain if not set
+BACKEND_API_URL = os.environ.get("BACKEND_API_URL", "https://survey.idinsight.io/api")
 
 
 def make_pdf_url(filename: str, mode: str = "regular") -> str:

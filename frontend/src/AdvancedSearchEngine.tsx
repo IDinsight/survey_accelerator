@@ -133,14 +133,27 @@ const AdvancedSearchEngine: React.FC<AdvancedSearchEngineProps> = ({ onLogout, u
   }
 
   const handleCardClick = (result: DocumentSearchResult) => {
+    console.log("Card clicked, result:", result)
+
+    // Check if highlighted PDF URL exists
     if (result.metadata.highlighted_pdf_url) {
+      console.log("Using highlighted PDF URL:", result.metadata.highlighted_pdf_url)
       setSelectedPDF(result.metadata.highlighted_pdf_url)
+    } else if (result.metadata.pdf_url) {
+      console.log("Using regular PDF URL:", result.metadata.pdf_url)
+      setSelectedPDF(result.metadata.pdf_url)
     } else {
-      setSelectedPDF(result.metadata.pdf_url ?? null)
+      console.error("No PDF URL available for this result")
+      setSelectedPDF(null)
+      // Optionally show an error message to the user
+      toast.error("No PDF available for this document")
+      return
     }
+
     setSelectedCardId(result.metadata.id)
     setCurrentPageNumber(null)
     setSelectedHighlightedId(null)
+
     if (result.matches.length > 0) {
       setCurrentPageNumber(result.matches[0].page_number)
       setSelectedHighlightedId(result.matches[0].rank)
