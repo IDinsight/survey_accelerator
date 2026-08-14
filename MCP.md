@@ -68,6 +68,49 @@ survey text only comes from `get_document_pages` or `get_document_text`. Every
 search result carries a `document_id` and `page_number` to feed straight into
 the follow-up call.
 
+## Deploying
+
+The MCP server ships inside the backend image, so deploying it means
+redeploying the backend. On the Docker Compose host:
+
+```bash
+cd <repo>
+git pull
+
+# Optional: require a bearer token. Add to deployment/docker-compose/.backend.env
+#   MCP_API_KEY=<generate one, e.g. openssl rand -hex 32>
+
+cd deployment/docker-compose
+docker compose up -d --build backend   # --build is required: requirements.txt changed
+docker compose restart caddy           # picks up the new /mcp route
+```
+
+No database migration is needed. This release adds no columns, only optional
+fields on an existing response schema.
+
+Then check it from anywhere:
+
+```bash
+curl -s -X POST https://<your-domain>/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -c 200
+```
+
+Six tools in the response means it is live.
+
+### If something goes wrong
+
+Set `MCP_ENABLED=0` in `.backend.env` and restart the backend. The endpoint
+disappears and the rest of the API is untouched; no rollback of the image is
+needed.
+
+Watch the first container start. This release moves uvicorn from 0.23.2 to
+0.33.0, and production runs gunicorn with the `main.Worker` class built on
+`uvicorn.workers`. That module still exists in 0.33 but is deprecated, and it
+was removed in 0.34, so do not bump uvicorn further without moving to the
+`uvicorn-worker` package first.
+
 ## Configuration
 
 | Variable | Default | Meaning |
