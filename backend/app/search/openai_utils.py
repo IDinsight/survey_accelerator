@@ -248,89 +248,81 @@ async def rank_search_results(query: str, document_chunks: list[dict]) -> list[d
             if len(parts) > 1:
                 raw_text = parts[1].strip()
 
-        prompt = f"""
+        prompt = f'''
 USER QUERY: "{query}"
 
 Score the given page on two dimensions:
-1. CONTEXTUAL MATCH (0–10): How well the page addresses the **intent** of the query (even if via paraphrase, related examples, background analysis, etc.).
-2. DIRECT QUESTION MATCH (0–10): How clearly the page contains an **explicit question** about the query topic (e.g. a survey question “Do you read to your child daily?” for “child literacy”).
+1.  **CONTEXTUAL MATCH (1–10):** How well the page addresses the **intent** of the query (even if via paraphrase, related examples, background analysis, etc.).
+2.  **DIRECT QUESTION MATCH (1–10):** How clearly the page contains an **explicit question** about the query topic (e.g., a survey question “Do you read to your child daily?” for “child literacy”).
 
 Then assign:
-- contextual_score (1–10)
-- direct_match_score (1–10)
-- match_type:
-    • "direct"    if direct_match_score ≥ 7 (contains a clear, on‐topic question)
-    • "balanced"  if 4 ≤ direct_match_score ≤ 6
-    • "contextual" if direct_match_score ≤ 3
+-   `contextual_score` (1–10)
+-   `direct_match_score` (1–10)
+-   `match_type`:
+    -   `"direct"` if `direct_match_score` ≥ 7 (contains a clear, on-topic question)
+    -   `"balanced"` if 4 ≤ `direct_match_score` ≤ 6
+    -   `"contextual"` if `direct_match_score` ≤ 3
 
-EXAMPLES
+---
+**EXAMPLES**
 
-Example 1  
-Query: "child literacy"  
-Page:  
-> RAW TEXT: “LIT4. How often do you read stories to your child?  
-> 1. Daily  2. Weekly  3. Monthly  4. Never.”  
-Scoring:
-```
-{"contextual_score": 10, "direct_match_score": 10, "match_type": "direct"}
-Reasoning: Contains an explicit survey question about reading to a child, directly addressing “child literacy.”
-
-Example 2
+**Example 1**
 Query: "child literacy"
 Page:
-
-RAW TEXT: “Literacy levels among children improved by 15% in Region A since 2019, driven by after‐school tutoring programs.”
+CONTEXT: This section discusses survey questions related to children's education and home environment.
+RAW TEXT: "LIT4. How often do you read stories to your child? 1. Daily 2. Weekly 3. Monthly 4. Never."
 Scoring:
+```json
+{{"contextual_score": 10, "direct_match_score": 10, "match_type": "direct"}}
+```
+Reasoning: Contains an explicit survey question about reading to a child, directly addressing “child literacy.”
 
+**Example 2**
+Query: "child literacy"
+Page:
+CONTEXT: This section provides an analysis of educational outcomes in various regions.
+RAW TEXT: "Literacy levels among children improved by 15% in Region A since 2019, driven by after-school tutoring programs."
+Scoring:
+```json
+{{"contextual_score": 9, "direct_match_score": 1, "match_type": "contextual"}}
+```
+Reasoning: Strong context (trend data on child literacy) but no actual question about the topic, so `direct_match_score` = 1.
 
-
-
-{"contextual_score": 9, "direct_match_score": 0, "match_type": "contextual"}
-Reasoning: Strong context (trend data on child literacy) but no actual question about the topic, so direct_match_score = 0.
-
-Example 3
+**Example 3**
 Query: "maternal health services accessibility"
 Page:
-
-RAW TEXT: “QMH5: How far do you travel to receive prenatal care?
-
-< 5 km 2. 5–10 km 3. > 10 km”
+CONTEXT: This section contains survey questions about access to healthcare facilities for mothers.
+RAW TEXT: "QMH5: How far do you travel to receive prenatal care? 1. < 5 km 2. 5–10 km 3. > 10 km"
 Scoring:
+```json
+{{"contextual_score": 10, "direct_match_score": 8, "match_type": "direct"}}
+```
+Reasoning: Contains an explicit accessibility question (“How far…prenatal care”) so high `direct_match_score`.
 
-
-
-
-{"contextual_score": 10, "direct_match_score": 8, "match_type": "direct"}
-Reasoning: Contains an explicit accessibility question (“How far…prenatal care”) so high direct_match_score.
-
-Example 4
+**Example 4**
 Query: "education program effectiveness"
 Page:
-
 CONTEXT: Discusses government spending on school infrastructure.
-RAW TEXT: “Since 2020, investment in classroom buildings rose by 20%.”
+RAW TEXT: "Since 2020, investment in classroom buildings rose by 20%."
 Scoring:
-
-
-
-
-{"contextual_score": 7, "direct_match_score": 2, "match_type": "contextual"}
+```json
+{{"contextual_score": 7, "direct_match_score": 2, "match_type": "contextual"}}
+```
 Reasoning: Relevant background on education investment, but no question probing program outcomes.
+---
 
-DOCUMENT TO ANALYZE:
+**DOCUMENT TO ANALYZE:**
 {chunk_text[:20000]}
 
-Return  only, with exactly:
-
-
-
-
-{
+**Return JSON only, with exactly:**
+```json
+{{
   "contextual_score": N,
   "direct_match_score": N,
   "match_type": "direct|balanced|contextual"
-}
-        """
+}}
+```
+'''
 
         try:
             response = await async_client.chat.completions.create(
