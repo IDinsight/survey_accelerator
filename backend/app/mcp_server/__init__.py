@@ -33,8 +33,14 @@ class McpPathFix:
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         """Rewrite a bare /mcp path to /mcp/ before passing the request on."""
-        if scope["type"] == "http" and scope["path"] == MCP_PATH:
-            scope = dict(scope, path=MCP_PATH + "/", raw_path=(MCP_PATH + "/").encode())
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            # Behind a root_path (production runs with BACKEND_ROOT_PATH=/api)
+            # the incoming path may or may not carry that prefix, so match both.
+            root = scope.get("root_path", "") or ""
+            if path == MCP_PATH or (root and path == f"{root}{MCP_PATH}"):
+                fixed = path + "/"
+                scope = dict(scope, path=fixed, raw_path=fixed.encode())
         await self.app(scope, receive, send)
 
 

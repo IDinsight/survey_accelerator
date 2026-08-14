@@ -19,9 +19,11 @@ import contextlib
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import (
+    MCP_ALLOWED_HOSTS,
     MCP_DEFAULT_MAX_RESULTS,
     MCP_MAX_RESULTS_LIMIT,
     MCP_MAX_TEXT_CHARS,
@@ -64,11 +66,33 @@ to browse the library by organization, country or year.
 Use `list_filter_values` to discover valid filter values before filtering; \
 guessing organization names tends to return nothing."""
 
+# The transport's DNS rebinding protection ships allowing localhost only, so a
+# deployment reached on any other hostname rejects every request with 421 until
+# that hostname is named in MCP_ALLOWED_HOSTS.
+_LOCAL_HOSTS = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+_LOCAL_ORIGINS = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+
+
+def _transport_security() -> TransportSecuritySettings:
+    """Allow localhost plus any hostname this deployment answers on."""
+    configured = [h.strip() for h in MCP_ALLOWED_HOSTS.split(",") if h.strip()]
+    hosts = _LOCAL_HOSTS + configured + [f"{h}:*" for h in configured]
+    origins = _LOCAL_ORIGINS + [
+        f"{scheme}://{h}" for h in configured for scheme in ("https", "http")
+    ]
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=hosts,
+        allowed_origins=origins,
+    )
+
+
 mcp = FastMCP(
     "survey-accelerator",
     instructions=INSTRUCTIONS,
     stateless_http=True,
     json_response=True,
+    transport_security=_transport_security(),
 )
 
 

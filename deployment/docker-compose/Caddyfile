@@ -3,6 +3,9 @@
     # than the /api-prefixed form. flush_interval disables response buffering,
     # which the streamable HTTP transport needs when it streams over SSE.
     handle /mcp* {
+        # The transport is mounted at /mcp/ and a bare /mcp would otherwise be
+        # answered with a 307 that some MCP clients drop the POST body on.
+        rewrite /mcp /mcp/
         reverse_proxy backend:8000 {
             flush_interval -1
         }
