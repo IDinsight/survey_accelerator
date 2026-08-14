@@ -65,3 +65,7 @@ MCP_DEFAULT_MAX_RESULTS = int(os.environ.get("MCP_DEFAULT_MAX_RESULTS", 10))
 MCP_MAX_RESULTS_LIMIT = int(os.environ.get("MCP_MAX_RESULTS_LIMIT", 25))
 # Character budget for a single get_document_text call before it paginates.
 MCP_MAX_TEXT_CHARS = int(os.environ.get("MCP_MAX_TEXT_CHARS", 40000))
+# Hostnames this server is reached on, comma separated. The MCP transport has
+# DNS rebinding protection that allows only localhost out of the box, so any
+# remote deployment must name itself here or every request fails with 421.
+MCP_ALLOWED_HOSTS = os.environ.get("MCP_ALLOWED_HOSTS", "")
