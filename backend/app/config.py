@@ -52,3 +52,16 @@ SERVICE_ACCOUNT_FILE_PATH = os.environ.get(
 
 # Other Configurations
 MAIN_DOWNLOAD_DIR = "downloaded_gdrives_sa"
+
+# MCP Server Configuration
+# Set MCP_ENABLED=0 to drop the /mcp endpoint entirely.
+MCP_ENABLED = os.environ.get("MCP_ENABLED", "1") == "1"
+# Optional shared bearer token. When unset the /mcp endpoint is open to anyone
+# who can reach the backend.
+MCP_API_KEY = os.environ.get("MCP_API_KEY") or None
+# Default and hard cap on results per search. Each result costs two LLM calls,
+# so the cap is what stops a single tool call from running for minutes.
+MCP_DEFAULT_MAX_RESULTS = int(os.environ.get("MCP_DEFAULT_MAX_RESULTS", 10))
+MCP_MAX_RESULTS_LIMIT = int(os.environ.get("MCP_MAX_RESULTS_LIMIT", 25))
+# Character budget for a single get_document_text call before it paginates.
+MCP_MAX_TEXT_CHARS = int(os.environ.get("MCP_MAX_TEXT_CHARS", 40000))

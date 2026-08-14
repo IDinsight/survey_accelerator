@@ -1,4 +1,13 @@
 {$DOMAIN:localhost} {
+    # MCP endpoint, so Claude connectors point at https://<domain>/mcp rather
+    # than the /api-prefixed form. flush_interval disables response buffering,
+    # which the streamable HTTP transport needs when it streams over SSE.
+    handle /mcp* {
+        reverse_proxy backend:8000 {
+            flush_interval -1
+        }
+    }
+
     # Route API requests to the backend
     handle /api/* {
         uri strip_prefix /api

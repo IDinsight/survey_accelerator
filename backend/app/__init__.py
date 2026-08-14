@@ -1,9 +1,10 @@
-import os
+from typing import Any, Callable, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import auth, contributions, feedback, ingestion, pdfs, search, users
+from .config import MCP_ENABLED
 from .utils import setup_logger
 
 logger = setup_logger()
@@ -13,11 +14,28 @@ def create_app() -> FastAPI:
     """
     Create a FastAPI application with the appropriate routers.
     """
+    # The MCP endpoint needs its session manager running for the lifetime of the
+    # app, so it has to be wired up before FastAPI is constructed. Import lazily
+    # so a missing `mcp` dependency degrades to "no MCP" rather than no backend.
+    mount: Optional[Callable[[FastAPI], None]] = None
+    lifespan: Optional[Callable[[FastAPI], Any]] = None
+    if MCP_ENABLED:
+        try:
+            from .mcp_server import mcp_lifespan, mount_mcp
+
+            mount, lifespan = mount_mcp, mcp_lifespan
+        except ImportError as e:
+            logger.error(f"MCP server disabled -- could not import dependencies: {e}")
+
     app = FastAPI(
         title="Survey Accelerator",
         debug=True,
+        lifespan=lifespan,
     )
     logger.info("Creating FastAPI application")
+
+    if mount is not None:
+        mount(app)
     app.include_router(ingestion.router)
     app.include_router(search.router)
     app.include_router(users.router)
@@ -42,7 +60,8 @@ def create_app() -> FastAPI:
 
     # Add headers middleware to enable PDF embedding in iframes and objects
     @app.middleware("http")
-    async def add_pdf_headers(request, call_next):
+    async def add_pdf_headers(request: Any, call_next: Any) -> Any:
+        """Allow PDFs to be embedded in iframes and objects cross-origin."""
         response = await call_next(request)
 
         # For PDF files, add headers to allow embedding in iframes and objects
