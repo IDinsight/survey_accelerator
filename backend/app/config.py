@@ -56,9 +56,19 @@ MAIN_DOWNLOAD_DIR = "downloaded_gdrives_sa"
 # MCP Server Configuration
 # Set MCP_ENABLED=0 to drop the /mcp endpoint entirely.
 MCP_ENABLED = os.environ.get("MCP_ENABLED", "1") == "1"
-# Optional shared bearer token. When unset the /mcp endpoint is open to anyone
-# who can reach the backend.
+# Optional shared bearer token. When set, every caller must present it and the
+# endpoint stops being open. Normally left unset: callers identify themselves
+# with a personal key instead, and anonymous callers are rate limited rather
+# than refused.
 MCP_API_KEY = os.environ.get("MCP_API_KEY") or None
+# Prefix on personal MCP keys. Lives here rather than in the mcp_server package
+# so the users router can mint keys without importing it, which would close an
+# import cycle back through search and users.
+MCP_KEY_PREFIX = "sa_"
+# Searches an unidentified caller gets per window, per IP. 0 disables the limit
+# and makes the endpoint completely open.
+MCP_ANON_RATE_LIMIT = int(os.environ.get("MCP_ANON_RATE_LIMIT", 20))
+MCP_ANON_RATE_WINDOW_MINUTES = int(os.environ.get("MCP_ANON_RATE_WINDOW_MINUTES", 60))
 # Default and hard cap on results per search. Each result costs two LLM calls,
 # so the cap is what stops a single tool call from running for minutes.
 MCP_DEFAULT_MAX_RESULTS = int(os.environ.get("MCP_DEFAULT_MAX_RESULTS", 10))

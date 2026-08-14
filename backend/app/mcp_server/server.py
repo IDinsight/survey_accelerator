@@ -16,6 +16,7 @@ gunicorn with several workers and requests are not pinned to one of them.
 """
 
 import contextlib
+import json
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -30,6 +31,7 @@ from app.config import (
 )
 from app.database import get_sqlalchemy_async_engine
 from app.ingestion.models import DocumentDB
+from app.search.models import log_search
 from app.search.pdf_highlight_utils import get_highlighted_pdf
 from app.search.utils import hybrid_search
 from app.utils import setup_logger
@@ -45,6 +47,12 @@ from .documents import (
     get_pages,
     list_library,
     page_link,
+)
+from .identity import (
+    anonymous_quota_exceeded,
+    caller_ip,
+    rate_limit_message,
+    resolve_caller,
 )
 
 logger = setup_logger()
@@ -157,6 +165,16 @@ async def search_surveys(
     max_results = _clamp(max_results, 1, MCP_MAX_RESULTS_LIMIT)
 
     async with db_session() as session:
+        # Identify the caller so the search can be attributed. Anonymous callers
+        # are served too, up to their rate limit.
+        user = await resolve_caller(session)
+        if user is None and await anonymous_quota_exceeded(session):
+            return {
+                "error": rate_limit_message(),
+                "query": query,
+                "results": [],
+            }
+
         results = await hybrid_search(
             session,
             query_str=query,
@@ -166,6 +184,7 @@ async def search_surveys(
         )
 
         if not results:
+            await _log(session, user, query, {"results": []})
             return {
                 "query": query,
                 "count": 0,
@@ -213,7 +232,7 @@ async def search_surveys(
                 }
             )
 
-        return {
+        response = {
             "query": query,
             "count": len(documents),
             "results": documents,
@@ -222,6 +241,31 @@ async def search_surveys(
                 "promising documents to read the real text of the matching pages."
             ),
         }
+        await _log(session, user, query, response)
+        return response
+
+
+async def _log(
+    session: AsyncSession, user: Any, query: str, response: Dict[str, Any]
+) -> None:
+    """
+    Record an MCP search.
+
+    Every search is logged whether or not the caller could be identified, so
+    usage stays visible; the anonymous rate limit also counts these rows.
+    """
+    try:
+        await log_search(
+            session,
+            user=user,
+            query=query,
+            search_response=json.dumps(response, default=str),
+            source="mcp",
+            client_ip=caller_ip(),
+        )
+    except Exception as e:
+        # Logging must never take down a search.
+        logger.error(f"MCP: could not log search '{query}': {e}")
 
 
 async def _highlight(result: Any, query: str) -> Optional[str]:

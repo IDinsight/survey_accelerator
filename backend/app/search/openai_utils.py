@@ -248,7 +248,7 @@ async def rank_search_results(query: str, document_chunks: list[dict]) -> list[d
             if len(parts) > 1:
                 raw_text = parts[1].strip()
 
-        prompt = f'''
+        prompt = f"""
 USER QUERY: "{query}"
 
 Score the given page on two dimensions:
@@ -322,7 +322,7 @@ Reasoning: Relevant background on education investment, but no question probing 
   "match_type": "direct|balanced|contextual"
 }}
 ```
-'''
+"""
 
         try:
             response = await async_client.chat.completions.create(

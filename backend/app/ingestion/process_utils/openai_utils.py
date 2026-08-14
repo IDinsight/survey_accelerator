@@ -53,4 +53,3 @@ async def generate_contextual_summary(document_content: str, chunk_content: str)
     except Exception as e:
         logger.error(f"Unexpected error generating contextual summary: {e}")
         return ""
-

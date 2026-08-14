@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import TIMESTAMP, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -21,4 +22,10 @@ class UsersDB(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
     num_results_preference: Mapped[int] = mapped_column(
         Integer, server_default=text("25"), nullable=False
+    )
+    # SHA256 of the user's personal MCP key. The key itself is shown once at
+    # creation and never stored, so a lost key is regenerated rather than
+    # recovered.
+    mcp_key_hash: Mapped[Optional[str]] = mapped_column(
+        String(length=64), nullable=True, index=True, unique=True
     )

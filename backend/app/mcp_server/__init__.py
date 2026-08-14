@@ -6,9 +6,9 @@ returns the lifespan context the session manager needs.
 
 import contextlib
 import json
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator, Callable, Optional
 
-from app.config import MCP_API_KEY
+from app.config import MCP_ANON_RATE_LIMIT, MCP_API_KEY
 from app.utils import setup_logger
 
 from .server import mcp
@@ -60,15 +60,25 @@ async def _reject(send: Callable, status: int, message: str) -> None:
     await send({"type": "http.response.body", "body": body})
 
 
-def _authorized(scope: Any) -> bool:
-    """Check the shared bearer token when one is configured."""
-    if not MCP_API_KEY:
-        return True
+def _bearer(scope: Any) -> Optional[str]:
+    """Pull the bearer credential off the request, if there is one."""
     for name, value in scope.get("headers", []):
         if name == b"authorization":
-            token = value.decode("latin-1").removeprefix("Bearer ").strip()
-            return token == MCP_API_KEY
-    return False
+            return value.decode("latin-1").removeprefix("Bearer ").strip() or None
+    return None
+
+
+def _authorized(token: Optional[str]) -> bool:
+    """
+    Decide whether the request may proceed at all.
+
+    With no shared token configured the endpoint is open to everyone; identity
+    and rate limiting are handled per tool call instead. A configured shared
+    token turns it back into a closed endpoint.
+    """
+    if not MCP_API_KEY:
+        return True
+    return token == MCP_API_KEY
 
 
 @contextlib.asynccontextmanager
@@ -94,21 +104,23 @@ def mount_mcp(app: Any) -> None:
     mcp.streamable_http_app()
 
     async def mcp_asgi(scope: Any, receive: Any, send: Any) -> None:
-        """Gate on the bearer token, then hand off to the MCP transport."""
-        if not _authorized(scope):
+        """Identify the caller, then hand off to the MCP transport."""
+        if not _authorized(_bearer(scope)):
             await _reject(send, 401, "Invalid or missing bearer token.")
             return
+        # Per-caller identity is resolved inside the tools from the request the
+        # transport attaches to each message; see identity.py.
         await mcp.session_manager.handle_request(scope, receive, send)
 
     app.mount(MCP_PATH, mcp_asgi)
     app.add_middleware(McpPathFix)
 
     if MCP_API_KEY:
-        logger.info("MCP server mounted at /mcp (bearer token required)")
+        logger.info("MCP server mounted at /mcp (shared bearer token required)")
     else:
-        logger.warning(
-            "MCP server mounted at /mcp with NO authentication. "
-            "Set MCP_API_KEY to require a bearer token."
+        logger.info(
+            "MCP server mounted at /mcp (open; personal keys attribute searches, "
+            f"anonymous callers limited to {MCP_ANON_RATE_LIMIT} searches per window)"
         )
 
 

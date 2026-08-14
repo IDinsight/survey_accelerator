@@ -109,7 +109,7 @@ async def _process_and_highlight_pdf(
     # instead of a temporary one that gets deleted
     pdf_filename = hashlib.md5(pdf_url.encode()).hexdigest() + "_original.pdf"
     pdf_path = os.path.join(HIGHLIGHT_DIR, pdf_filename)
-    
+
     try:
         # If we already downloaded this PDF before, don't download it again
         if os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 1000:
@@ -122,7 +122,9 @@ async def _process_and_highlight_pdf(
             async with aiohttp.ClientSession() as session:
                 async with session.get(pdf_url) as response:
                     if response.status != 200:
-                        logger.error(f"Failed to download PDF from {pdf_url}: HTTP {response.status}")
+                        logger.error(
+                            f"Failed to download PDF from {pdf_url}: HTTP {response.status}"
+                        )
                         raise HTTPException(
                             status_code=response.status,
                             detail=f"Failed to download PDF: HTTP {response.status}",
@@ -139,7 +141,7 @@ async def _process_and_highlight_pdf(
                     status_code=500,
                     detail=f"Downloaded PDF file missing at {pdf_path}",
                 )
-                
+
             file_size = os.path.getsize(pdf_path)
             if file_size == 0:
                 logger.error(f"Downloaded file is empty: {pdf_path}")
@@ -147,7 +149,7 @@ async def _process_and_highlight_pdf(
                     status_code=500,
                     detail="Downloaded PDF file is empty",
                 )
-            
+
             logger.info(f"Successfully downloaded PDF ({file_size} bytes)")
 
         # Highlight
@@ -167,7 +169,7 @@ async def _process_and_highlight_pdf(
                 status_code=500,
                 detail="Failed to create highlighted PDF",
             )
-        
+
         logger.info(f"Successfully created highlighted PDF at {output_path}")
 
     except Exception as e:
@@ -183,14 +185,16 @@ def _add_page_specific_highlights(
         # Ensure both paths are absolute
         input_path = os.path.abspath(input_path)
         output_path = os.path.abspath(output_path)
-        
+
         logger.info(f"Opening PDF for highlighting: {input_path}")
-        
+
         # Try to open the PDF with more specific error handling
         try:
             doc = fitz.open(input_path)
             if doc.is_closed or doc.page_count == 0:
-                logger.error(f"Failed to open PDF: {input_path} (document is closed or empty)")
+                logger.error(
+                    f"Failed to open PDF: {input_path} (document is closed or empty)"
+                )
                 raise ValueError(f"PDF could not be opened or is empty: {input_path}")
             logger.info(f"Successfully opened PDF with {doc.page_count} pages")
         except Exception as e:
@@ -201,12 +205,14 @@ def _add_page_specific_highlights(
                 logger.info(f"File exists, size: {file_size} bytes")
                 if file_size < 1000:  # If file is small, log its content for debugging
                     try:
-                        with open(input_path, 'rb') as f:
-                            logger.info(f"File content (first 100 bytes): {f.read(100)}")
+                        with open(input_path, "rb") as f:
+                            logger.info(
+                                f"File content (first 100 bytes): {f.read(100)}"
+                            )
                     except Exception as read_err:
                         logger.error(f"Failed to read file content: {str(read_err)}")
             raise
-        
+
         highlights_added = False
         for page_str, keywords in page_keywords.items():
             page_num = int(page_str) - 1
@@ -225,17 +231,17 @@ def _add_page_specific_highlights(
                     annot.set_opacity(0.6)
                     annot.update()
                     highlights_added = True
-        
+
         # Save the highlighted PDF
         logger.info(f"Saving highlighted PDF to: {output_path}")
         doc.save(output_path)
         doc.close()
-        
+
         if highlights_added:
             logger.info("Highlights added successfully")
         else:
             logger.warning("No highlights were added to the PDF")
-            
+
     except Exception as e:
         logger.error(f"Error in _add_page_specific_highlights: {str(e)}")
         raise
@@ -247,26 +253,28 @@ def _add_highlights(input_path: str, output_path: str, search_terms: str) -> Non
         # Ensure both paths are absolute
         input_path = os.path.abspath(input_path)
         output_path = os.path.abspath(output_path)
-        
+
         logger.info(f"Opening PDF for highlighting: {input_path}")
-        
+
         # Try to open the PDF with more specific error handling
         try:
             doc = fitz.open(input_path)
             if doc.is_closed or doc.page_count == 0:
-                logger.error(f"Failed to open PDF: {input_path} (document is closed or empty)")
+                logger.error(
+                    f"Failed to open PDF: {input_path} (document is closed or empty)"
+                )
                 raise ValueError(f"PDF could not be opened or is empty: {input_path}")
             logger.info(f"Successfully opened PDF with {doc.page_count} pages")
         except Exception as e:
             logger.error(f"Failed to open PDF: {input_path}, Error: {str(e)}")
             raise
-            
+
         terms = (
             [t.strip() for t in search_terms.split(",")]
             if "," in search_terms
             else [search_terms]
         )
-        
+
         highlights_added = False
         for page in doc:
             for term in terms:
@@ -280,17 +288,17 @@ def _add_highlights(input_path: str, output_path: str, search_terms: str) -> Non
                     annot.set_opacity(0.6)
                     annot.update()
                     highlights_added = True
-        
+
         # Save the highlighted PDF
         logger.info(f"Saving highlighted PDF to: {output_path}")
         doc.save(output_path)
         doc.close()
-        
+
         if highlights_added:
             logger.info("Highlights added successfully")
         else:
             logger.warning("No highlights were added to the PDF")
-            
+
     except Exception as e:
         logger.error(f"Error in _add_highlights: {str(e)}")
         raise

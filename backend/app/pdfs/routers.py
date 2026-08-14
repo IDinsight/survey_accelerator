@@ -16,16 +16,18 @@ TAG_METADATA = {
 HIGHLIGHT_DIR = os.getenv("HIGHLIGHT_DIR", "./highlighted_pdfs")
 LOCAL_UPLOAD_DIR = os.getenv("LOCAL_UPLOAD_DIR", "./uploaded_files")
 
+
 def create_pdf_response(file_path: str) -> FileResponse:
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    
+
     response = FileResponse(file_path, media_type="application/pdf")
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["X-Frame-Options"] = "ALLOWALL"
     response.headers["Content-Security-Policy"] = "frame-ancestors *; object-src *"
     response.headers["Cache-Control"] = "public, max-age=3600"
     return response
+
 
 @router.get("/pdf/{filename}")
 async def serve_pdf(
@@ -44,5 +46,5 @@ async def serve_pdf(
         file_path = os.path.join(HIGHLIGHT_DIR, filename)
     else:
         raise HTTPException(status_code=400, detail="Invalid type specified")
-    
+
     return create_pdf_response(file_path)

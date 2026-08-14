@@ -5,9 +5,15 @@ from sqlalchemy.future import select
 
 from ..auth.dependencies import authenticate_user
 from ..database import get_async_session
+from ..config import MCP_KEY_PREFIX
 from ..users.models import UsersDB
 from ..users.utils import send_password_reset_email
-from ..utils import get_password_salted_hash, verify_password_salted_hash
+from ..utils import (
+    generate_key,
+    get_key_hash,
+    get_password_salted_hash,
+    verify_password_salted_hash,
+)
 from .schemas import PasswordChange, UserCreate, UserOut
 
 TAG_METADATA = {
@@ -150,3 +156,82 @@ async def update_num_results_preference(
         ) from None
 
     return {"message": "Number of results preference updated successfully."}
+
+
+@router.post("/mcp-key", status_code=status.HTTP_201_CREATED)
+async def create_mcp_key(
+    current_user: UsersDB = Depends(authenticate_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, str]:
+    """
+    Mint a personal key for connecting Claude to the MCP server.
+
+    The key is returned once and only its hash is stored, so it cannot be
+    retrieved later. Calling this again replaces any existing key, which is how
+    a lost or leaked one is rotated.
+    """
+    key = f"{MCP_KEY_PREFIX}{generate_key()}"
+
+    stmt = select(UsersDB).where(UsersDB.user_id == current_user.user_id)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    user.mcp_key_hash = get_key_hash(key)
+    session.add(user)
+    try:
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create MCP key: {str(e)}",
+        ) from None
+
+    return {
+        "mcp_key": key,
+        "message": (
+            "Store this key now, it is not shown again. Connect with: "
+            "claude mcp add --transport http survey-accelerator "
+            "https://survey.idinsight.io/mcp --header "
+            f'"Authorization: Bearer {key}"'
+        ),
+    }
+
+
+@router.delete("/mcp-key", status_code=status.HTTP_200_OK)
+async def revoke_mcp_key(
+    current_user: UsersDB = Depends(authenticate_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, str]:
+    """
+    Revoke the authenticated user's MCP key.
+
+    Any Claude connection using it falls back to anonymous, so it keeps working
+    but is rate limited and no longer attributed.
+    """
+    stmt = select(UsersDB).where(UsersDB.user_id == current_user.user_id)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    user.mcp_key_hash = None
+    session.add(user)
+    try:
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to revoke MCP key: {str(e)}",
+        ) from None
+
+    return {"message": "MCP key revoked."}

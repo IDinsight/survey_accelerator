@@ -125,6 +125,7 @@ async def search_generic(
             user=user,
             query=request.query,
             search_response=response.model_dump_json(),
+            source="web",
         )
 
         return response
