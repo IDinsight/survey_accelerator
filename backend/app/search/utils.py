@@ -50,6 +50,7 @@ def create_metadata(doc: DocumentDB) -> DocumentMetadata:
     """
     return DocumentMetadata(
         id=doc.id,
+        document_id=doc.document_id,
         file_name=doc.file_name,
         title=doc.title,
         summary=doc.summary,
@@ -58,6 +59,7 @@ def create_metadata(doc: DocumentDB) -> DocumentMetadata:
         organizations=doc.organizations,
         regions=doc.regions,
         year=doc.year,
+        survey_type=doc.survey_type,
     )
 
 
@@ -68,6 +70,7 @@ async def perform_semantic_search(
     organizations: List[str],
     survey_types: List[str],
 ) -> List[Tuple[DocumentDB, float]]:
+    """Rank document chunks by embedding distance to the query."""
     try:
         distance = DocumentDB.content_embedding.cosine_distance(embedding).label(
             "distance"
@@ -96,6 +99,7 @@ async def perform_keyword_search(
     organizations: List[str],
     survey_types: List[str],
 ) -> List[Tuple[DocumentDB, float]]:
+    """Rank document chunks by full-text search relevance to the query."""
     try:
         rank = func.ts_rank_cd(
             func.to_tsvector("english", DocumentDB.contextualized_chunk),

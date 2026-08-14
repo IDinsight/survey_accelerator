@@ -10,6 +10,9 @@ class DocumentMetadata(BaseModel):
     """Schema for the document metadata."""
 
     id: int
+    # The logical document identifier. `id` above is the primary key of a single
+    # page row, so it cannot be used to refer to the document as a whole.
+    document_id: Optional[int] = None
     file_name: str
     title: str
     summary: str
@@ -19,6 +22,7 @@ class DocumentMetadata(BaseModel):
     organizations: List[str]
     regions: List[str]
     year: int
+    survey_type: Optional[str] = None
 
 
 # Base search request shared by both search types

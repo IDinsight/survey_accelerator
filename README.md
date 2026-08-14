@@ -14,6 +14,7 @@ Survey Accelerator is a free, fast, and completely open-source tool that provide
 - **Survey Type Filters**: Filter by survey types (DHS Surveys, MICS7 questionnaires, household income surveys, etc.)
 - **Survey Contribution**: Users can contribute new surveys to the database for review
 - **Highlighted PDFs**: View matches directly within PDF documents with relevant text highlighted
+- **MCP Server**: Connect the library to Claude and search it conversationally, then have Claude read the underlying survey text. See [MCP.md](MCP.md)
 
 ## Getting Started
 
@@ -69,6 +70,19 @@ For containerized deployment, use the provided Dockerfiles and docker-compose co
 # From the project root
 docker-compose -f deployment/docker-compose/docker-compose.yml up -d
 ```
+
+## Using it from Claude
+
+The backend exposes an MCP server at `/mcp`, so Claude can search the library
+and read the surveys it finds:
+
+```bash
+claude mcp add --transport http survey-accelerator https://<your-domain>/mcp
+```
+
+Then ask for what you need ("find me good instruments measuring household food
+security and pull the exact question wording"). Full setup, the tool list and
+the authentication options are in [MCP.md](MCP.md).
 
 ## Usage
 
