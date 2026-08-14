@@ -134,6 +134,7 @@ where it broke:
 | `Invalid Host header` (421) | The hostname is missing from `MCP_ALLOWED_HOSTS`. |
 | `401` | Only when `MCP_API_KEY` is set. An unrecognised personal key is not an error; the caller is treated as anonymous. |
 | `307` | Redirect to the trailing-slash form; Caddy's `rewrite /mcp /mcp/` is missing. |
+| `Invalid Origin header` (403) | A browser-based client sent an `Origin` not in the allowlist. Add it to `MCP_ALLOWED_ORIGINS`. |
 
 The server-side confirmation is the startup log:
 
@@ -160,11 +161,12 @@ was removed in 0.34, so do not bump uvicorn further without moving to the
 | --- | --- | --- |
 | `MCP_ENABLED` | `1` | Set to `0` to drop the `/mcp` endpoint. |
 | `MCP_API_KEY` | unset | Shared bearer token. Setting it closes the endpoint entirely and disables the per-user model below. Normally left unset. |
-| `MCP_ANON_RATE_LIMIT` | `20` | Searches an unidentified caller gets per window, per IP. `0` removes the limit. |
+| `MCP_ANON_RATE_LIMIT` | `20` | Searches an unidentified caller gets per window, per IP. `0` removes the limit. Production runs `200`, because the Claude web connector calls from Anthropic's infrastructure so every web user shares a source IP and therefore one bucket. |
 | `MCP_ANON_RATE_WINDOW_MINUTES` | `60` | Length of that window. |
 | `MCP_DEFAULT_MAX_RESULTS` | `10` | Results per search when the caller does not specify. |
 | `MCP_MAX_RESULTS_LIMIT` | `25` | Hard cap on results per search. |
 | `MCP_MAX_TEXT_CHARS` | `40000` | Character budget before `get_document_text` paginates. |
+| `MCP_ALLOWED_ORIGINS` | unset | Extra browser origins allowed to call the endpoint, added to the built-in Claude web origins. An unrecognised `Origin` is rejected with 403. |
 | `MCP_ALLOWED_HOSTS` | unset | Comma-separated hostnames this server answers on. **Required for any non-localhost deployment**: the transport's DNS rebinding protection allows only localhost by default and rejects everything else with 421. Production is `survey.idinsight.io`. |
 
 ### Access model
@@ -236,3 +238,24 @@ curl -s -X POST https://survey.idinsight.io/mcp \
 With a token set, the same request without an `Authorization` header should
 return 401. If any of these return HTML, the request reached the frontend
 catch-all rather than the backend.
+
+## Connecting from the Claude web app
+
+Settings → Connectors → Add custom connector:
+
+| Field | Value |
+| --- | --- |
+| Name | `Survey Accelerator` |
+| Remote MCP server URL | `https://survey.idinsight.io/mcp` |
+| OAuth Client ID / Secret | leave blank |
+| Individual sign-in | off |
+
+Two limits apply to this route specifically. The dialog has no field for a
+custom header, so a web-app user cannot present a personal key and is always
+anonymous. And the connector calls from Anthropic's infrastructure rather than
+the user's machine, so all web-app users share a source IP and therefore one
+anonymous rate-limit bucket -- which is why the production limit is 200 rather
+than 20.
+
+Per-user attribution over this route needs OAuth. Until then it only works
+where a header can be set: Claude Code, and Claude Desktop via `mcp-remote`.

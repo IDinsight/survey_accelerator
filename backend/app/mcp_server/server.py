@@ -25,7 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import (
     MCP_ALLOWED_HOSTS,
+    MCP_ALLOWED_ORIGINS,
     MCP_DEFAULT_MAX_RESULTS,
+    MCP_DEFAULT_ORIGINS,
     MCP_MAX_RESULTS_LIMIT,
     MCP_MAX_TEXT_CHARS,
 )
@@ -82,12 +84,23 @@ _LOCAL_ORIGINS = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
 
 
 def _transport_security() -> TransportSecuritySettings:
-    """Allow localhost plus any hostname this deployment answers on."""
+    """
+    Allow localhost, this deployment's own hostnames, and the Claude web app.
+
+    An unrecognised Origin is rejected with 403, so any browser-based client
+    has to be listed or its connector simply fails. Origin is absent on
+    server-to-server calls, which the transport treats as fine.
+    """
     configured = [h.strip() for h in MCP_ALLOWED_HOSTS.split(",") if h.strip()]
     hosts = _LOCAL_HOSTS + configured + [f"{h}:*" for h in configured]
-    origins = _LOCAL_ORIGINS + [
-        f"{scheme}://{h}" for h in configured for scheme in ("https", "http")
-    ]
+
+    extra_origins = [o.strip() for o in MCP_ALLOWED_ORIGINS.split(",") if o.strip()]
+    origins = (
+        _LOCAL_ORIGINS
+        + MCP_DEFAULT_ORIGINS
+        + extra_origins
+        + [f"{scheme}://{h}" for h in configured for scheme in ("https", "http")]
+    )
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=hosts,

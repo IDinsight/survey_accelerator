@@ -2,6 +2,13 @@
     # MCP endpoint, so Claude connectors point at https://<domain>/mcp rather
     # than the /api-prefixed form. flush_interval disables response buffering,
     # which the streamable HTTP transport needs when it streams over SSE.
+    # OAuth discovery probes must 404 rather than fall through to the catch-all,
+    # which would answer them with the React app under a 200 and leave a client
+    # trying to parse HTML as metadata. The MCP endpoint implements no OAuth.
+    handle /.well-known/oauth-* {
+        respond 404
+    }
+
     handle /mcp* {
         # The transport is mounted at /mcp/ and a bare /mcp would otherwise be
         # answered with a 307 that some MCP clients drop the POST body on.

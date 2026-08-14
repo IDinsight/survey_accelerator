@@ -79,3 +79,14 @@ MCP_MAX_TEXT_CHARS = int(os.environ.get("MCP_MAX_TEXT_CHARS", 40000))
 # DNS rebinding protection that allows only localhost out of the box, so any
 # remote deployment must name itself here or every request fails with 421.
 MCP_ALLOWED_HOSTS = os.environ.get("MCP_ALLOWED_HOSTS", "")
+# Origins allowed to call the MCP endpoint. The transport rejects an
+# unrecognised Origin with 403, which would break browser-based clients: the
+# Claude web connector is the reason these defaults are here. Anything set in
+# the environment is added to them.
+MCP_DEFAULT_ORIGINS = [
+    "https://claude.ai",
+    "https://www.claude.ai",
+    "https://claude.com",
+    "https://www.claude.com",
+]
+MCP_ALLOWED_ORIGINS = os.environ.get("MCP_ALLOWED_ORIGINS", "")
