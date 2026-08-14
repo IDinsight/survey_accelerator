@@ -86,8 +86,10 @@ git pull
 echo "MCP_API_KEY=$(openssl rand -hex 32)" >> deployment/docker-compose/.backend.env
 
 cd deployment/docker-compose
-docker compose up -d --build backend   # --build is required: requirements.txt changed
-docker compose restart caddy           # picks up the new /mcp route
+# -p sa is required. The live stack runs under the project name "sa"; without
+# it compose builds a second stack and collides on the postgres port.
+docker compose -p sa up -d --no-deps --build backend
+docker compose -p sa restart caddy      # picks up the /mcp route
 ```
 
 No database migration is needed. This release adds no columns, only optional
@@ -97,14 +99,9 @@ fields on an existing response schema.
 
 Caddy serves the React app as a catch-all, so **an unmatched path returns 200
 with HTML rather than a 404**. A status code alone therefore proves nothing.
-Check the backend's own route table instead:
 
-```bash
-# 0 before the deploy, non-zero after
-curl -s https://survey.idinsight.io/api/openapi.json | grep -c mcp
-```
-
-Then confirm the endpoint answers JSON rather than the SPA:
+`/mcp` is a mounted ASGI app rather than a FastAPI route, so it never appears
+in `openapi.json`. Do not look for it there. The only real check is calling it:
 
 ```bash
 curl -s -X POST https://survey.idinsight.io/mcp \
@@ -114,9 +111,23 @@ curl -s -X POST https://survey.idinsight.io/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -c 200
 ```
 
-A JSON-RPC body listing six tools means it is live. HTML starting with
-`<!doctype html>` means the request fell through to the frontend, so the
-backend did not pick up the new route.
+A JSON-RPC body listing six tools means it is live. Anything else tells you
+where it broke:
+
+| Response | Cause |
+| --- | --- |
+| `<!doctype html>` | Request fell through to the frontend catch-all; Caddy has no `/mcp` route. |
+| `{"detail":"Not Found"}` | Reached the backend, but the MCP server did not mount. Check the startup log for `MCP server mounted at /mcp`. |
+| `Invalid Host header` (421) | The hostname is missing from `MCP_ALLOWED_HOSTS`. |
+| `401` | Missing or wrong bearer token. Expected when testing without one. |
+| `307` | Redirect to the trailing-slash form; Caddy's `rewrite /mcp /mcp/` is missing. |
+
+The server-side confirmation is the startup log:
+
+```bash
+docker logs sa-backend-1 2>&1 | grep "MCP server"
+# MCP server mounted at /mcp (bearer token required)
+```
 
 ### If something goes wrong
 
@@ -139,6 +150,7 @@ was removed in 0.34, so do not bump uvicorn further without moving to the
 | `MCP_DEFAULT_MAX_RESULTS` | `10` | Results per search when the caller does not specify. |
 | `MCP_MAX_RESULTS_LIMIT` | `25` | Hard cap on results per search. |
 | `MCP_MAX_TEXT_CHARS` | `40000` | Character budget before `get_document_text` paginates. |
+| `MCP_ALLOWED_HOSTS` | unset | Comma-separated hostnames this server answers on. **Required for any non-localhost deployment**: the transport's DNS rebinding protection allows only localhost by default and rejects everything else with 421. Production is `survey.idinsight.io`. |
 
 ### A note on cost and access
 
