@@ -14,13 +14,13 @@ separate service to deploy.
 ### Claude Code
 
 ```bash
-claude mcp add --transport http survey-accelerator https://<your-domain>/mcp
+claude mcp add --transport http survey-accelerator https://survey.idinsight.io/mcp
 ```
 
 With a bearer token configured:
 
 ```bash
-claude mcp add --transport http survey-accelerator https://<your-domain>/mcp \
+claude mcp add --transport http survey-accelerator https://survey.idinsight.io/mcp \
   --header "Authorization: Bearer <MCP_API_KEY>"
 ```
 
@@ -34,7 +34,7 @@ Add to `claude_desktop_config.json`:
     "survey-accelerator": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "https://<your-domain>/mcp",
+        "-y", "mcp-remote", "https://survey.idinsight.io/mcp",
         "--header", "Authorization: Bearer <MCP_API_KEY>"
       ]
     }
@@ -70,15 +70,20 @@ the follow-up call.
 
 ## Deploying
 
+Production is `survey.idinsight.io`, an EC2 instance in `ap-south-1`
+(`ec2-65-2-55-67.ap-south-1.compute.amazonaws.com`) running the Docker Compose
+stack in `deployment/docker-compose` behind Caddy.
+
 The MCP server ships inside the backend image, so deploying it means
-redeploying the backend. On the Docker Compose host:
+redeploying the backend. On that host:
 
 ```bash
 cd <repo>
 git pull
 
-# Optional: require a bearer token. Add to deployment/docker-compose/.backend.env
-#   MCP_API_KEY=<generate one, e.g. openssl rand -hex 32>
+# Set the shared token before building. This file is gitignored and exists
+# only on the server.
+echo "MCP_API_KEY=$(openssl rand -hex 32)" >> deployment/docker-compose/.backend.env
 
 cd deployment/docker-compose
 docker compose up -d --build backend   # --build is required: requirements.txt changed
@@ -88,16 +93,30 @@ docker compose restart caddy           # picks up the new /mcp route
 No database migration is needed. This release adds no columns, only optional
 fields on an existing response schema.
 
-Then check it from anywhere:
+### Verifying
+
+Caddy serves the React app as a catch-all, so **an unmatched path returns 200
+with HTML rather than a 404**. A status code alone therefore proves nothing.
+Check the backend's own route table instead:
 
 ```bash
-curl -s -X POST https://<your-domain>/mcp \
+# 0 before the deploy, non-zero after
+curl -s https://survey.idinsight.io/api/openapi.json | grep -c mcp
+```
+
+Then confirm the endpoint answers JSON rather than the SPA:
+
+```bash
+curl -s -X POST https://survey.idinsight.io/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
+  -H "Authorization: Bearer $MCP_API_KEY" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -c 200
 ```
 
-Six tools in the response means it is live.
+A JSON-RPC body listing six tools means it is live. HTML starting with
+`<!doctype html>` means the request fell through to the frontend, so the
+backend did not pick up the new route.
 
 ### If something goes wrong
 
@@ -154,11 +173,15 @@ this does not implement.
 ## Smoke checks
 
 ```bash
-curl -s -X POST https://<your-domain>/mcp \
+curl -s https://survey.idinsight.io/api/openapi.json | grep -c mcp   # route registered?
+
+curl -s -X POST https://survey.idinsight.io/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
+  -H "Authorization: Bearer $MCP_API_KEY" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 With a token set, the same request without an `Authorization` header should
-return 401.
+return 401. If any of these return HTML, the request reached the frontend
+catch-all rather than the backend.
